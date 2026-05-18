@@ -180,6 +180,61 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# OpenCode config
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🛠️ OpenCode configuration"
+
+if ! command -v opencode >/dev/null 2>&1; then
+    echo "⏭️ [opencode] Not installed; skipping"
+else
+    echo "...[opencode] Detected"
+
+    SOURCE_CONFIG="$DOTFILES_DIR/config/opencode/opencode.json"
+    TARGET_DIR="$HOME/.config/opencode"
+    TARGET_CONFIG="$TARGET_DIR/opencode.json"
+
+    if [[ ! -f "$SOURCE_CONFIG" ]]; then
+        echo "⚠️ [opencode] Missing source config: $SOURCE_CONFIG"
+        echo "...[opencode] Skipping hydration"
+    else
+        mkdir -p "$TARGET_DIR"
+
+        OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-}"
+
+        if [[ -n "$OLLAMA_BASE_URL" ]]; then
+            echo "...[opencode] OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
+
+            if ! command -v jq >/dev/null 2>&1; then
+                echo "⚠️ [opencode] jq not installed; using default config"
+                JQ_FILTER='.'
+            else
+                echo "...[opencode] Applying baseURL override"
+                JQ_FILTER=".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\""
+            fi
+        else
+            echo "...[opencode] OLLAMA_BASE_URL not set; using config default"
+            JQ_FILTER='.'
+        fi
+
+        echo "...[opencode] Hydrating config"
+        jq \
+            "$JQ_FILTER" \
+            "$SOURCE_CONFIG" > "$TARGET_CONFIG.tmp"
+
+        if [[ $? -eq 0 ]]; then
+            mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG"
+            echo "✔ [opencode] Config written"
+            chmod 644 "$TARGET_CONFIG" 2>/dev/null || true
+        else
+            echo "⚠️ [opencode] jq failed; leaving existing config untouched"
+            rm -f "$TARGET_CONFIG.tmp"
+        fi
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Finish
 # -----------------------------------------------------------------------------
 
