@@ -169,6 +169,11 @@ if command -v starship >/dev/null 2>&1; then
             ;;
     esac
 
+    # Starship theme
+    STARSHIP_PRESET="${STARSHIP_PRESET:-no-runtime-versions}"
+    echo "...[starship] Configuring starship theme - preset: $STARSHIP_PRESET"
+    starship preset "$STARSHIP_PRESET" -o ~/.config/starship.toml
+
     echo "✅ [starship] Configured"
 else
     echo "⚠️ [starship] Not installed"
