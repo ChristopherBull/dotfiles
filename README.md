@@ -32,7 +32,7 @@ Dev Container support is built-in for automatic environment setup. To apply to a
 ```json
 {
     "dotfiles.repository": "https://github.com/YOURNAME/dotfiles",
-    "dotfiles.targetPath": "~",
+    "dotfiles.targetPath": "~/dotfiles",
     "dotfiles.installCommand": "install.sh"
 }
 ```
