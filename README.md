@@ -11,18 +11,6 @@ Configure the environment, not provision it.
 - Development environment settings
 - Cross-platform compatibility
 
-> [!TIP]
-> The typical base devcontainer image [`mcr.microsoft.com/devcontainers/base`](https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/base/about) pre-installs common dependencies for development, including `zsh`. You can enable it in User `settings.json`:
->
-> ```json
-> "dev.containers.defaultFeatures": {
->    "ghcr.io/devcontainers/features/common-utils:2": {
->      "installZsh": true,
->      "configureZshAsDefaultShell": true
->    },
->  },
-> ```
-
 ## Installation
 
 ### For Dev Containers (Recommended)
@@ -50,6 +38,32 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     ```bash
     cd ~/.dotfiles && ./install.sh
     ```
+
+## VS Code User Settings
+
+This repository includes a sample VS Code user settings file at [`.config/.vscode/user.settings.json`](/.config/.vscode/user.settings.json). This file is **not** automatically installed, but provides a set of recommended settings that complement the dotfiles and can impact your development environment. These settings are not guaranteed to sync across all VS Code instances, so you may need to manually copy them into your own `settings.json` if you want them applied.
+
+**Summary of included settings:**
+
+- Dotfiles integration: repository URL, target path, and install command for Dev Containers
+- Terminal and shell preferences for Linux (ensure to not override shell customisations)
+- Default Dev Container features (e.g., Zsh, Starship prompt, Open Code)
+- Default IDE extensions
+
+> [!NOTE]
+> Review and copy the contents of `.config/.vscode/user.settings.json` into your own VS Code user settings as needed.
+
+> [!TIP]
+> The typical base devcontainer image [`mcr.microsoft.com/devcontainers/base`](https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/base/about) pre-installs common dependencies for development, including `zsh`. You can enable it in User `settings.json`:
+>
+> ```json
+> "dev.containers.defaultFeatures": {
+>    "ghcr.io/devcontainers/features/common-utils:2": {
+>      "installZsh": true,
+>      "configureZshAsDefaultShell": true
+>    },
+>  },
+> ```
 
 ## Customisation
 

@@ -1,0 +1,22 @@
+{
+  "dotfiles.repository": "https://github.com/YOURNAME/dotfiles",
+  "dotfiles.targetPath": "~/dotfiles",
+  "dotfiles.installCommand": "install.sh",
+  
+  "terminal.integrated.defaultProfile.linux": null,
+
+  "dev.containers.defaultExtensions": [
+    "mhutchie.git-graph",
+    "Gruntfuggly.todo-tree",
+    "naumovs.color-highlight"
+  ],
+
+  "dev.containers.defaultFeatures": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+        "installZsh": true,
+        "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers-extra/features/opencode:1": {},
+    "ghcr.io/devcontainers-extra/features/starship:1": {}
+  }
+}
