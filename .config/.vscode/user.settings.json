@@ -1,5 +1,5 @@
 {
-  "dotfiles.repository": "https://github.com/YOURNAME/dotfiles",
+  "dotfiles.repository": "https://github.com/ChristopherBull/dotfiles",
   "dotfiles.targetPath": "~/dotfiles",
   "dotfiles.installCommand": "install.sh",
   
