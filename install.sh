@@ -230,6 +230,89 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# VS Code user settings
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🖥️ VS Code configuration"
+
+# Identify if VS Code is installed by checking for the `code` CLI
+if ! command -v code >/dev/null 2>&1; then
+    echo "⏭️ [vscode] Not installed; skipping"
+else
+    echo "...[vscode] Detected: $(code --version 2>/dev/null | head -1)"
+
+    SOURCE_VSCODE_SETTINGS="$DOTFILES_DIR/.config/.vscode/user.settings.json"
+
+    if [[ ! -f "$SOURCE_VSCODE_SETTINGS" ]]; then
+        echo "⚠️ [vscode] Missing source settings: $SOURCE_VSCODE_SETTINGS"
+        echo "...[vscode] Skipping configuration"
+    else
+        # Resolve the OS-specific path to the VS Code user settings file
+        case "$(uname -s)" in
+            Darwin)
+                VSCODE_USER_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
+                ;;
+            Linux)
+                VSCODE_USER_SETTINGS="$HOME/.config/Code/User/settings.json"
+                ;;
+            *)
+                echo "⚠️ [vscode] Unsupported OS: $(uname -s); cannot determine settings path"
+                VSCODE_USER_SETTINGS=""
+                ;;
+        esac
+
+        if [[ -z "$VSCODE_USER_SETTINGS" ]]; then
+            echo "...[vscode] Skipping configuration"
+        elif [[ ! -f "$VSCODE_USER_SETTINGS" ]]; then
+            # No existing settings file — copy dotfiles settings directly
+            echo "...[vscode] No existing settings found; copying dotfiles settings"
+            mkdir -p "$(dirname "$VSCODE_USER_SETTINGS")"
+            cp "$SOURCE_VSCODE_SETTINGS" "$VSCODE_USER_SETTINGS"
+            echo "✅ [vscode] Settings applied"
+        else
+            echo "...[vscode] Existing settings found at: $VSCODE_USER_SETTINGS"
+            echo "...[vscode] Merging dotfiles settings into user settings"
+
+            # jq is required to deep-merge the two JSON settings files
+            if ! command -v jq >/dev/null 2>&1; then
+                echo "⚠️ [vscode] jq not installed; cannot merge settings"
+                echo "...[vscode] Skipping (install jq and re-run to apply)"
+            else
+                # Deep merge strategy:
+                #   - Objects are merged recursively; dotfiles values take precedence over existing
+                #   - Arrays are unioned (combined + deduplicated) so existing user values are preserved
+                MERGED=$(jq -s '
+                    def deepmerge(a; b):
+                        if (a | type) == "object" and (b | type) == "object" then
+                            reduce (b | keys_unsorted[]) as $key (
+                                a;
+                                . + { ($key): deepmerge(a[$key]; b[$key]) }
+                            )
+                        elif (a | type) == "array" and (b | type) == "array" then
+                            (a + b | unique)
+                        elif b == null then a
+                        else b
+                        end;
+                    deepmerge(.[0]; .[1])
+                ' "$VSCODE_USER_SETTINGS" "$SOURCE_VSCODE_SETTINGS") || {
+                    echo "⚠️ [vscode] jq merge failed; skipping"
+                    MERGED=""
+                }
+
+                if [[ -n "$MERGED" ]]; then
+                    # Write to a temp file first, then atomically replace to avoid partial writes
+                    echo "$MERGED" > "$VSCODE_USER_SETTINGS.tmp" \
+                        && mv "$VSCODE_USER_SETTINGS.tmp" "$VSCODE_USER_SETTINGS" \
+                        || { echo "⚠️ [vscode] Failed to write merged settings"; rm -f "$VSCODE_USER_SETTINGS.tmp"; }
+                    echo "✅ [vscode] Settings merged"
+                fi
+            fi
+        fi
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Finish
 # -----------------------------------------------------------------------------
 
