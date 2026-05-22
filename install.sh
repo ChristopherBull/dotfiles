@@ -198,6 +198,8 @@ else
     if [[ ! -f "$SOURCE_CONFIG" ]]; then
         echo "⚠️ [opencode] Missing source config: $SOURCE_CONFIG"
         echo "...[opencode] Skipping hydration"
+    elif [[ -f "$TARGET_CONFIG" ]]; then
+        echo "✅ [opencode] Config already exists; skipping (delete to re-hydrate)"
     else
         mkdir -p "$TARGET_DIR"
 
@@ -207,30 +209,23 @@ else
             echo "...[opencode] OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
 
             if ! command -v jq >/dev/null 2>&1; then
-                echo "⚠️ [opencode] jq not installed; using default config"
-                JQ_FILTER='.'
+                echo "⚠️ [opencode] jq not installed; cannot apply baseURL override"
+                echo "...[opencode] Copying default config without URL override"
+                cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
             else
-                echo "...[opencode] Applying baseURL override"
-                JQ_FILTER=".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\""
+                echo "...[opencode] Applying baseURL override with jq"
+                jq ".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\"" \
+                    "$SOURCE_CONFIG" > "$TARGET_CONFIG.tmp" \
+                    && mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG" \
+                    || { echo "⚠️ [opencode] jq failed; copying default config"; cp "$SOURCE_CONFIG" "$TARGET_CONFIG"; rm -f "$TARGET_CONFIG.tmp"; }
             fi
         else
-            echo "...[opencode] OLLAMA_BASE_URL not set; using config default"
-            JQ_FILTER='.'
+            echo "...[opencode] OLLAMA_BASE_URL not set; copying default config"
+            cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
         fi
 
-        echo "...[opencode] Hydrating config"
-        jq \
-            "$JQ_FILTER" \
-            "$SOURCE_CONFIG" > "$TARGET_CONFIG.tmp"
-
-        if [[ $? -eq 0 ]]; then
-            mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG"
-            echo "✔ [opencode] Config written"
-            chmod 644 "$TARGET_CONFIG" 2>/dev/null || true
-        else
-            echo "⚠️ [opencode] jq failed; leaving existing config untouched"
-            rm -f "$TARGET_CONFIG.tmp"
-        fi
+        chmod 644 "$TARGET_CONFIG" 2>/dev/null || true
+        echo "✔ [opencode] Config written"
     fi
 fi
 
