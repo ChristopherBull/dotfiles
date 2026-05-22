@@ -6,9 +6,11 @@
   "terminal.integrated.defaultProfile.linux": null,
 
   "dev.containers.defaultExtensions": [
-    "mhutchie.git-graph",
+    "anthropic.claude-code",
     "Gruntfuggly.todo-tree",
-    "naumovs.color-highlight"
+    "mhutchie.git-graph",
+    "naumovs.color-highlight",
+    "sst-dev.opencode"
   ],
 
   "dev.containers.defaultFeatures": {
@@ -16,6 +18,7 @@
         "installZsh": true,
         "configureZshAsDefaultShell": true
     },
+    "ghcr.io/devcontainers-extra/features/claude-code:2": {},
     "ghcr.io/devcontainers-extra/features/opencode:1": {},
     "ghcr.io/devcontainers-extra/features/starship:1": {}
   }
