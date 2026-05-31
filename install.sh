@@ -150,6 +150,9 @@ if command -v starship >/dev/null 2>&1; then
     echo "...[starship] Login shell: $LOGIN_SHELL"
     echo "...[starship] Using: $RESOLVED_LOGIN_SHELL"
 
+    # shellcheck disable=SC2016
+    # Single quotes are intentional: write the literal `eval "$(starship init …)"`
+    # line into the rc file so it runs at every shell startup, not at install time.
     case "$RESOLVED_LOGIN_SHELL" in
         bash)
             echo "...[starship] Configuring bash integration"
@@ -214,10 +217,15 @@ else
                 cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
             else
                 echo "...[opencode] Applying baseURL override with jq"
-                jq ".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\"" \
+                if jq ".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\"" \
                     "$SOURCE_CONFIG" > "$TARGET_CONFIG.tmp" \
-                    && mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG" \
-                    || { echo "⚠️ [opencode] jq failed; copying default config"; cp "$SOURCE_CONFIG" "$TARGET_CONFIG"; rm -f "$TARGET_CONFIG.tmp"; }
+                    && mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG"; then
+                    echo "...[opencode] baseURL override applied"
+                else
+                    echo "⚠️ [opencode] jq failed; copying default config"
+                    cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
+                    rm -f "$TARGET_CONFIG.tmp"
+                fi
             fi
         else
             echo "...[opencode] OLLAMA_BASE_URL not set; copying default config"
@@ -302,10 +310,13 @@ else
 
                 if [[ -n "$MERGED" ]]; then
                     # Write to a temp file first, then atomically replace to avoid partial writes
-                    echo "$MERGED" > "$VSCODE_USER_SETTINGS.tmp" \
-                        && mv "$VSCODE_USER_SETTINGS.tmp" "$VSCODE_USER_SETTINGS" \
-                        || { echo "⚠️ [vscode] Failed to write merged settings"; rm -f "$VSCODE_USER_SETTINGS.tmp"; }
-                    echo "✅ [vscode] Settings merged"
+                    if echo "$MERGED" > "$VSCODE_USER_SETTINGS.tmp" \
+                        && mv "$VSCODE_USER_SETTINGS.tmp" "$VSCODE_USER_SETTINGS"; then
+                        echo "✅ [vscode] Settings merged"
+                    else
+                        echo "⚠️ [vscode] Failed to write merged settings"
+                        rm -f "$VSCODE_USER_SETTINGS.tmp"
+                    fi
                 fi
             fi
         fi
@@ -389,10 +400,13 @@ else
     }
 
     if [[ -n "$MERGED" ]]; then
-        echo "$MERGED" > "$TARGET_CLAUDE_SETTINGS.tmp" \
-            && mv "$TARGET_CLAUDE_SETTINGS.tmp" "$TARGET_CLAUDE_SETTINGS" \
-            || { echo "⚠️ [claude] Failed to write merged settings"; rm -f "$TARGET_CLAUDE_SETTINGS.tmp"; }
-        echo "✅ [claude] Settings merged"
+        if echo "$MERGED" > "$TARGET_CLAUDE_SETTINGS.tmp" \
+            && mv "$TARGET_CLAUDE_SETTINGS.tmp" "$TARGET_CLAUDE_SETTINGS"; then
+            echo "✅ [claude] Settings merged"
+        else
+            echo "⚠️ [claude] Failed to write merged settings"
+            rm -f "$TARGET_CLAUDE_SETTINGS.tmp"
+        fi
     fi
 fi
 
