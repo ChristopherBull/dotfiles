@@ -1,0 +1,16 @@
+# Global Git attributes — applies to every repo via ~/.config/git/attributes.
+# Deliberately minimal: only essential cross-platform line-ending safety
+# (Windows + macOS + Linux/Dev Containers). Per-repo .gitattributes still wins.
+
+# Let Git auto-detect text vs binary; normalise to LF in the repo,
+# check out with the platform's native endings.
+* text=auto
+
+# Shell scripts MUST stay LF, even on Windows checkouts — Dev Containers
+# execute them and CRLF breaks the shebang.
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Windows batch files MUST stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

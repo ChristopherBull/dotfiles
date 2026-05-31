@@ -313,6 +313,90 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Global Git attributes
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🔗 Global Git attributes"
+
+SOURCE_GIT_ATTRS="$DOTFILES_DIR/.config/git/attributes"
+TARGET_GIT_ATTRS="$HOME/.config/git/attributes"
+
+if [[ ! -f "$SOURCE_GIT_ATTRS" ]]; then
+    echo "⚠️ [git] Missing source: $SOURCE_GIT_ATTRS; skipping"
+else
+    mkdir -p "$(dirname "$TARGET_GIT_ATTRS")"
+    # Symlink so future updates propagate automatically. ~/.config/git/attributes
+    # is Git's default global attributes path (no `git config` needed).
+    ln -sf "$SOURCE_GIT_ATTRS" "$TARGET_GIT_ATTRS"
+    echo "✅ [git] Linked $TARGET_GIT_ATTRS"
+fi
+
+# -----------------------------------------------------------------------------
+# Global Claude Code settings
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🤖 Global Claude Code settings"
+
+# --- Personal CLAUDE.md (user-scoped memory) ---
+SOURCE_CLAUDE_MD="$DOTFILES_DIR/.config/claude/CLAUDE.md"
+TARGET_CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+
+if [[ ! -f "$SOURCE_CLAUDE_MD" ]]; then
+    echo "⚠️ [claude] Missing source: $SOURCE_CLAUDE_MD; skipping CLAUDE.md"
+else
+    mkdir -p "$(dirname "$TARGET_CLAUDE_MD")"
+    # Symlink — dotfiles fully owns this personal-prefs file.
+    ln -sf "$SOURCE_CLAUDE_MD" "$TARGET_CLAUDE_MD"
+    echo "✅ [claude] Linked $TARGET_CLAUDE_MD"
+fi
+
+# --- Global settings.json (allowlist; merged to preserve existing) ---
+SOURCE_CLAUDE_SETTINGS="$DOTFILES_DIR/.config/claude/settings.json"
+TARGET_CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+
+if [[ ! -f "$SOURCE_CLAUDE_SETTINGS" ]]; then
+    echo "⚠️ [claude] Missing source: $SOURCE_CLAUDE_SETTINGS; skipping"
+elif [[ ! -f "$TARGET_CLAUDE_SETTINGS" ]]; then
+    echo "...[claude] No existing settings; copying dotfiles settings"
+    mkdir -p "$(dirname "$TARGET_CLAUDE_SETTINGS")"
+    cp "$SOURCE_CLAUDE_SETTINGS" "$TARGET_CLAUDE_SETTINGS"
+    echo "✅ [claude] Settings applied"
+elif ! command -v jq >/dev/null 2>&1; then
+    echo "⚠️ [claude] jq not installed; cannot merge into existing settings"
+    echo "...[claude] Skipping (install jq and re-run to apply)"
+else
+    echo "...[claude] Existing settings found; merging allowlist"
+    # Union the permissions.allow arrays so dotfiles entries are added without
+    # discarding any the user already has. Other keys: dotfiles take precedence.
+    MERGED=$(jq -s '
+        def deepmerge(a; b):
+            if (a | type) == "object" and (b | type) == "object" then
+                reduce (b | keys_unsorted[]) as $key (
+                    a;
+                    . + { ($key): deepmerge(a[$key]; b[$key]) }
+                )
+            elif (a | type) == "array" and (b | type) == "array" then
+                (a + b | unique)
+            elif b == null then a
+            else b
+            end;
+        deepmerge(.[0]; .[1])
+    ' "$TARGET_CLAUDE_SETTINGS" "$SOURCE_CLAUDE_SETTINGS") || {
+        echo "⚠️ [claude] jq merge failed; skipping"
+        MERGED=""
+    }
+
+    if [[ -n "$MERGED" ]]; then
+        echo "$MERGED" > "$TARGET_CLAUDE_SETTINGS.tmp" \
+            && mv "$TARGET_CLAUDE_SETTINGS.tmp" "$TARGET_CLAUDE_SETTINGS" \
+            || { echo "⚠️ [claude] Failed to write merged settings"; rm -f "$TARGET_CLAUDE_SETTINGS.tmp"; }
+        echo "✅ [claude] Settings merged"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Finish
 # -----------------------------------------------------------------------------
 

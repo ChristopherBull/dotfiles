@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+
+      "Bash(npm ci)",
+      "Bash(npm install)",
+      "Bash(npm outdated)",
+      "Bash(npm list:*)",
+      "Bash(bundle install)",
+      "Bash(bundle exec jekyll build:*)",
+      "Bash(mise install)",
+      "Bash(mise ls:*)",
+
+      "Bash(npx eslint:*)",
+      "Bash(npx stylelint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx markdownlint:*)",
+      "Bash(npx markdownlint-cli2:*)",
+      "Bash(npx cspell:*)",
+      "Bash(npx commitlint:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(trunk check:*)"
+    ]
+  }
+}

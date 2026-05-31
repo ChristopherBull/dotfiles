@@ -65,6 +65,48 @@ This repository includes a sample VS Code user settings file at [`.config/.vscod
 >  },
 > ```
 
+## Global configurations
+
+`install.sh` installs a small set of personal, user-scoped configs to your home
+directory. Each is auto-discovered by its tool — no per-project wiring — so they
+apply across all workspaces and Dev Containers. Project-level config always takes
+precedence where it overlaps.
+
+| Source | Installed to | Tool pickup |
+| --- | --- | --- |
+| [`.config/git/attributes`](/.config/git/attributes) | `~/.config/git/attributes` | Git's default global attributes path (no `git config` needed). |
+| [`.config/claude/CLAUDE.md`](/.config/claude/CLAUDE.md) | `~/.claude/CLAUDE.md` | Claude Code user-scoped memory; layers under any repo `AGENTS.md`. |
+| [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist). |
+
+### Git attributes
+
+Minimal, essential cross-platform line-ending safety only (Windows, macOS, and
+Linux/Dev Containers): normalise to LF, force `*.sh`/`*.bash` to LF (CRLF breaks
+shebangs in containers) and `*.bat`/`*.cmd` to CRLF. Symlinked, so edits
+propagate. Per-repo `.gitattributes` still wins.
+
+### Claude Code
+
+- **`CLAUDE.md`** holds personal preferences only (e.g. British English, working
+  style). It is symlinked and loads for every project, layering *under* a repo's
+  tool-agnostic `AGENTS.md` — so no Claude-specific file is ever committed to a
+  project repo.
+- **`settings.json`** carries a conservative allowlist of named, predictable
+  build/lint/test tools. It is **merged** into any existing `~/.claude/settings.json`
+  (array union) via `jq`, so local entries are preserved.
+
+> [!NOTE]
+> A global allowlist applies to **every** repo you open, including unfamiliar
+> ones. The entries are limited to read-only commands and named tools, but
+> dependency installs and test/build commands still execute repo-defined code.
+> Scope anything you don't want auto-approved to a project's
+> `.claude/settings.local.json` instead.
+
+> [!TIP]
+> A global cSpell config is deliberately **not** included. It would accept words
+> locally that a repo's CI still flags (a local-dev vs reproducibility gap), so
+> spelling conveniences belong in each repo's own `.cspell` config.
+
 ## Customisation
 
 To customise for your environment:
