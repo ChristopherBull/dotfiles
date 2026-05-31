@@ -1,0 +1,37 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Scripts & configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Shell scripts (shellcheck)
+        run: |
+          mapfile -t files < <(git ls-files '*.sh')
+          echo "Validating ${#files[@]} shell script(s)..."
+          printf '%s\0' "${files[@]}" | xargs -0 shellcheck
+
+      - name: JSON (jq)
+        run: |
+          mapfile -t files < <(git ls-files '*.json')
+          echo "Validating ${#files[@]} JSON file(s)..."
+          printf '%s\0' "${files[@]}" | xargs -0 jq empty
+
+      - name: YAML (PyYAML)
+        run: |
+          mapfile -t files < <(git ls-files '*.yml' '*.yaml')
+          echo "Validating ${#files[@]} YAML file(s)..."
+          for file in "${files[@]}"; do
+            python3 -c "import sys, yaml; list(yaml.safe_load_all(open(sys.argv[1])))" "$file"
+          done

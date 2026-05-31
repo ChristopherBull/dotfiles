@@ -1,5 +1,7 @@
 # dotfiles
 
+[![Validate](https://github.com/ChristopherBull/dotfiles/actions/workflows/validate.yml/badge.svg)](https://github.com/ChristopherBull/dotfiles/actions/workflows/validate.yml)
+
 Personal workspace and terminal configuration files. Sync my development environment preferences across different machines and Dev Containers. Maintains a consistent settings when working with disposable environments like Dev Containers.
 
 Configure the environment, not provision it.
