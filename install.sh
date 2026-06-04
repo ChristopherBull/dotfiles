@@ -411,6 +411,131 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Language LSP plugins
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🔌 Language LSP plugins"
+
+detect_languages() {
+    local root="${1:-$(pwd)}"
+
+    if [[ -f "$root/.mise.toml" ]]; then
+        echo "...[lsp] Deriving languages from .mise.toml" >&2
+        grep -qE '^\s*python\s*=' "$root/.mise.toml" && echo python
+        grep -qE '^\s*node\s*=' "$root/.mise.toml" && echo node
+        grep -qE '^\s*rust\s*=' "$root/.mise.toml" && echo rust
+        grep -qE '^\s*go\s*=' "$root/.mise.toml" && echo go
+        return
+    fi
+
+    if [[ -f "$root/.tool-versions" ]]; then
+        echo "...[lsp] Deriving languages from .tool-versions" >&2
+        grep -qE '^python' "$root/.tool-versions" && echo python
+        grep -qE '^node(js)?' "$root/.tool-versions" && echo node
+        grep -qE '^rust' "$root/.tool-versions" && echo rust
+        grep -qE '^(go|golang)' "$root/.tool-versions" && echo go
+        return
+    fi
+
+    echo "...[lsp] No toolchain manifest; using language-file fallbacks" >&2
+    if [[ -f "$root/pyproject.toml" ]] || [[ -f "$root/requirements.txt" ]] || [[ -f "$root/setup.py" ]]; then
+        echo python
+    fi
+    [[ -f "$root/package.json" ]] && echo node
+    [[ -f "$root/Cargo.toml" ]] && echo rust
+    [[ -f "$root/go.mod" ]] && echo go
+}
+
+# Plugin registry: maps language → plugin name for Claude Code (claude plugins install <name>).
+# Extend here without touching detection logic.
+declare -A CLAUDE_PLUGINS=(
+    [python]="pyright-lsp"
+    [node]="typescript-lsp"
+    [rust]="rust-analyzer"
+    [go]="gopls"
+)
+
+# LSP server configs for OpenCode, merged into opencode.json under the "lsp" key.
+# OpenCode resolves these via the declared command — the server binary must be on PATH.
+declare -A OPENCODE_LSP_CONFIGS=(
+    [python]='{"command":["pyright-langserver","--stdio"],"extensions":[".py"]}'
+    [node]='{"command":["typescript-language-server","--stdio"],"extensions":[".js",".ts",".jsx",".tsx"]}'
+    [rust]='{"command":["rust-analyzer"],"extensions":[".rs"]}'
+    [go]='{"command":["gopls"],"extensions":[".go"]}'
+)
+
+install_claude_plugins() {
+    local lang="$1"
+    local plugin
+
+    [[ -n "${CLAUDE_PLUGINS[$lang]+_}" ]] || return 0
+    command -v claude >/dev/null 2>&1 || return 0
+
+    plugin="${CLAUDE_PLUGINS[$lang]}"
+    echo "...[lsp] Installing Claude plugin for $lang: $plugin"
+    if claude plugins install "$plugin"; then
+        echo "✅ [lsp] claude: $plugin"
+    else
+        echo "⚠️ [lsp] claude: failed to install $plugin"
+    fi
+}
+
+configure_opencode_lsp() {
+    local target="$HOME/.config/opencode/opencode.json"
+    local lang config_json patch merged
+
+    command -v opencode >/dev/null 2>&1 || return 0
+
+    if [[ ! -f "$target" ]]; then
+        echo "...[lsp] opencode: config not found; skipping LSP merge"
+        return 0
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "⚠️ [lsp] opencode: jq not installed; cannot merge LSP config"
+        return 0
+    fi
+
+    patch="{}"
+    for lang in "$@"; do
+        [[ -n "${OPENCODE_LSP_CONFIGS[$lang]+_}" ]] || continue
+        config_json="${OPENCODE_LSP_CONFIGS[$lang]}"
+        patch=$(printf '%s' "$patch" | jq --arg key "$lang" --argjson val "$config_json" '. + {($key): $val}')
+    done
+
+    [[ "$patch" == "{}" ]] && return 0
+
+    echo "...[lsp] opencode: merging LSP entries: $(printf '%s' "$patch" | jq -r '[keys[]] | join(", ")')"
+
+    merged=$(jq --argjson lsp "$patch" '.lsp = ((.lsp // {}) + $lsp)' "$target") || {
+        echo "⚠️ [lsp] opencode: jq merge failed"
+        return 1
+    }
+
+    if echo "$merged" > "$target.tmp" && mv "$target.tmp" "$target"; then
+        echo "✅ [lsp] opencode: LSP config merged"
+    else
+        echo "⚠️ [lsp] opencode: failed to write merged config"
+        rm -f "$target.tmp"
+    fi
+}
+
+mapfile -t DETECTED_LANGS < <(detect_languages)
+
+if [[ ${#DETECTED_LANGS[@]} -eq 0 ]]; then
+    echo "...[lsp] No languages detected; skipping"
+else
+    echo "...[lsp] Detected: ${DETECTED_LANGS[*]}"
+
+    for lang in "${DETECTED_LANGS[@]}"; do
+        install_claude_plugins "$lang"
+    done
+
+    configure_opencode_lsp "${DETECTED_LANGS[@]}"
+fi
+
+# -----------------------------------------------------------------------------
 # Finish
 # -----------------------------------------------------------------------------
 
