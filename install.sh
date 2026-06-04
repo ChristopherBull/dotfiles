@@ -194,7 +194,7 @@ if ! command -v opencode >/dev/null 2>&1; then
 else
     echo "...[opencode] Detected"
 
-    SOURCE_CONFIG="$DOTFILES_DIR/config/opencode/opencode.json"
+    SOURCE_CONFIG="$DOTFILES_DIR/.config/opencode/opencode.json"
     TARGET_DIR="$HOME/.config/opencode"
     TARGET_CONFIG="$TARGET_DIR/opencode.json"
 
