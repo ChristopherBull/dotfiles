@@ -12,6 +12,36 @@ echo ""
 echo "🚀 Starting dotfiles installation"
 
 # -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+# Writes $content to $target via a temp file, then prints $ok_msg or $fail_msg.
+write_atomic() {
+    local content="$1" target="$2" ok_msg="$3" fail_msg="$4"
+    if echo "$content" > "$target.tmp" && mv "$target.tmp" "$target"; then
+        echo "$ok_msg"
+    else
+        echo "$fail_msg"
+        rm -f "$target.tmp"
+    fi
+}
+
+# Merges objects recursively (dotfiles wins on conflict) and unions arrays.
+JQ_DEEPMERGE='
+    def deepmerge($a; $b):
+        if ($a | type) == "object" and ($b | type) == "object" then
+            reduce ($b | keys_unsorted[]) as $key (
+                $a;
+                . + { ($key): deepmerge($a[$key]; $b[$key]) }
+            )
+        elif ($a | type) == "array" and ($b | type) == "array" then
+            ($a + $b | unique)
+        elif $b == null then $a
+        else $b
+        end;
+'
+
+# -----------------------------------------------------------------------------
 # Symlink configs
 # -----------------------------------------------------------------------------
 
@@ -237,22 +267,6 @@ else
     fi
 fi
 
-# Shared by VS Code and Claude settings merges below.
-# Objects: merged recursively (dotfiles wins on conflict). Arrays: unioned + deduplicated.
-JQ_DEEPMERGE='
-    def deepmerge($a; $b):
-        if ($a | type) == "object" and ($b | type) == "object" then
-            reduce ($b | keys_unsorted[]) as $key (
-                $a;
-                . + { ($key): deepmerge($a[$key]; $b[$key]) }
-            )
-        elif ($a | type) == "array" and ($b | type) == "array" then
-            ($a + $b | unique)
-        elif $b == null then $a
-        else $b
-        end;
-'
-
 # -----------------------------------------------------------------------------
 # VS Code user settings
 # -----------------------------------------------------------------------------
@@ -310,14 +324,9 @@ else
                 }
 
                 if [[ -n "$MERGED" ]]; then
-                    # Write to a temp file first, then atomically replace to avoid partial writes
-                    if echo "$MERGED" > "$VSCODE_USER_SETTINGS.tmp" \
-                        && mv "$VSCODE_USER_SETTINGS.tmp" "$VSCODE_USER_SETTINGS"; then
-                        echo "✅ [vscode] Settings merged"
-                    else
-                        echo "⚠️ [vscode] Failed to write merged settings"
-                        rm -f "$VSCODE_USER_SETTINGS.tmp"
-                    fi
+                    write_atomic "$MERGED" "$VSCODE_USER_SETTINGS" \
+                        "✅ [vscode] Settings merged" \
+                        "⚠️ [vscode] Failed to write merged settings"
                 fi
             fi
         fi
@@ -387,13 +396,9 @@ else
     }
 
     if [[ -n "$MERGED" ]]; then
-        if echo "$MERGED" > "$TARGET_CLAUDE_SETTINGS.tmp" \
-            && mv "$TARGET_CLAUDE_SETTINGS.tmp" "$TARGET_CLAUDE_SETTINGS"; then
-            echo "✅ [claude] Settings merged"
-        else
-            echo "⚠️ [claude] Failed to write merged settings"
-            rm -f "$TARGET_CLAUDE_SETTINGS.tmp"
-        fi
+        write_atomic "$MERGED" "$TARGET_CLAUDE_SETTINGS" \
+            "✅ [claude] Settings merged" \
+            "⚠️ [claude] Failed to write merged settings"
     fi
 fi
 
@@ -520,12 +525,9 @@ configure_opencode_lsp() {
         return 1
     }
 
-    if echo "$merged" > "$target.tmp" && mv "$target.tmp" "$target"; then
-        echo "✅ [lsp] opencode: LSP config merged"
-    else
-        echo "⚠️ [lsp] opencode: failed to write merged config"
-        rm -f "$target.tmp"
-    fi
+    write_atomic "$merged" "$target" \
+        "✅ [lsp] opencode: LSP config merged" \
+        "⚠️ [lsp] opencode: failed to write merged config"
 }
 
 mapfile -t DETECTED_LANGS < <(detect_languages)
