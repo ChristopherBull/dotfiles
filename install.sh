@@ -263,7 +263,7 @@ else
         fi
 
         chmod 644 "$TARGET_CONFIG" 2>/dev/null || true
-        echo "✔ [opencode] Config written"
+        echo "✅ [opencode] Config written"
     fi
 fi
 
@@ -486,11 +486,8 @@ install_claude_plugins() {
 
     plugin="${CLAUDE_PLUGINS[$lang]}"
     echo "...[lsp] Installing Claude plugin for $lang: $plugin"
-    if claude plugins install "$plugin"; then
-        echo "✅ [lsp] claude: $plugin"
-    else
-        echo "⚠️ [lsp] claude: failed to install $plugin"
-    fi
+    # claude prints its own success line; only surface failures ourselves
+    claude plugins install "$plugin" || echo "⚠️ [lsp] claude: failed to install $plugin"
 }
 
 configure_opencode_lsp() {
