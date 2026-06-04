@@ -237,6 +237,22 @@ else
     fi
 fi
 
+# Shared by VS Code and Claude settings merges below.
+# Objects: merged recursively (dotfiles wins on conflict). Arrays: unioned + deduplicated.
+JQ_DEEPMERGE='
+    def deepmerge($a; $b):
+        if ($a | type) == "object" and ($b | type) == "object" then
+            reduce ($b | keys_unsorted[]) as $key (
+                $a;
+                . + { ($key): deepmerge($a[$key]; $b[$key]) }
+            )
+        elif ($a | type) == "array" and ($b | type) == "array" then
+            ($a + $b | unique)
+        elif $b == null then $a
+        else $b
+        end;
+'
+
 # -----------------------------------------------------------------------------
 # VS Code user settings
 # -----------------------------------------------------------------------------
@@ -287,23 +303,8 @@ else
                 echo "⚠️ [vscode] jq not installed; cannot merge settings"
                 echo "...[vscode] Skipping (install jq and re-run to apply)"
             else
-                # Deep merge strategy:
-                #   - Objects are merged recursively; dotfiles values take precedence over existing
-                #   - Arrays are unioned (combined + deduplicated) so existing user values are preserved
-                MERGED=$(jq -s '
-                    def deepmerge(a; b):
-                        if (a | type) == "object" and (b | type) == "object" then
-                            reduce (b | keys_unsorted[]) as $key (
-                                a;
-                                . + { ($key): deepmerge(a[$key]; b[$key]) }
-                            )
-                        elif (a | type) == "array" and (b | type) == "array" then
-                            (a + b | unique)
-                        elif b == null then a
-                        else b
-                        end;
-                    deepmerge(.[0]; .[1])
-                ' "$VSCODE_USER_SETTINGS" "$SOURCE_VSCODE_SETTINGS") || {
+                MERGED=$(jq -s "$JQ_DEEPMERGE deepmerge(.[0]; .[1])" \
+                    "$VSCODE_USER_SETTINGS" "$SOURCE_VSCODE_SETTINGS") || {
                     echo "⚠️ [vscode] jq merge failed; skipping"
                     MERGED=""
                 }
@@ -379,22 +380,8 @@ elif ! command -v jq >/dev/null 2>&1; then
     echo "...[claude] Skipping (install jq and re-run to apply)"
 else
     echo "...[claude] Existing settings found; merging allowlist"
-    # Union the permissions.allow arrays so dotfiles entries are added without
-    # discarding any the user already has. Other keys: dotfiles take precedence.
-    MERGED=$(jq -s '
-        def deepmerge(a; b):
-            if (a | type) == "object" and (b | type) == "object" then
-                reduce (b | keys_unsorted[]) as $key (
-                    a;
-                    . + { ($key): deepmerge(a[$key]; b[$key]) }
-                )
-            elif (a | type) == "array" and (b | type) == "array" then
-                (a + b | unique)
-            elif b == null then a
-            else b
-            end;
-        deepmerge(.[0]; .[1])
-    ' "$TARGET_CLAUDE_SETTINGS" "$SOURCE_CLAUDE_SETTINGS") || {
+    MERGED=$(jq -s "$JQ_DEEPMERGE deepmerge(.[0]; .[1])" \
+        "$TARGET_CLAUDE_SETTINGS" "$SOURCE_CLAUDE_SETTINGS") || {
         echo "⚠️ [claude] jq merge failed; skipping"
         MERGED=""
     }
