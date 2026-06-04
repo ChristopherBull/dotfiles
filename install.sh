@@ -404,8 +404,28 @@ fi
 echo ""
 echo "🔌 Language LSP plugins"
 
+# The install script runs from the dotfiles dir, not the project repo.
+find_project_root() {
+    local root
+    if [[ -n "${CODESPACE_VSCODE_FOLDER:-}" ]]; then
+        root="$CODESPACE_VSCODE_FOLDER"
+    elif [[ -d /workspaces ]]; then
+        local dir
+        for dir in /workspaces/*/; do
+            [[ "${dir%/}" == "$DOTFILES_DIR" ]] && continue
+            if [[ -d "$dir/.git" ]]; then
+                root="${dir%/}"
+                break
+            fi
+        done
+    fi
+    root="${root:-$(pwd)}"
+    echo "...[lsp] Project root: $root" >&2
+    echo "$root"
+}
+
 detect_languages() {
-    local root="${1:-$(pwd)}"
+    local root="${1:-$(find_project_root)}"
 
     if [[ -f "$root/.mise.toml" ]]; then
         echo "...[lsp] Deriving languages from .mise.toml" >&2
