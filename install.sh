@@ -334,6 +334,32 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Ghostty terminal config
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "👻 Ghostty configuration"
+
+SOURCE_GHOSTTY_CONFIG="$DOTFILES_DIR/.config/ghostty/config.ghostty"
+
+add_line_if_missing 'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' ~/.zshrc
+echo "✅ [ghostty] XDG_CONFIG_HOME set in ~/.zshrc"
+
+if [[ ! -f "$SOURCE_GHOSTTY_CONFIG" ]]; then
+    echo "⚠️ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
+else
+    TARGET_GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
+
+    if [[ -f "$TARGET_GHOSTTY_CONFIG" ]] && [[ -s "$TARGET_GHOSTTY_CONFIG" ]]; then
+        echo "✅ [ghostty] Config already exists and is non-empty; skipping"
+    else
+        mkdir -p "$(dirname "$TARGET_GHOSTTY_CONFIG")"
+        ln -sf "$SOURCE_GHOSTTY_CONFIG" "$TARGET_GHOSTTY_CONFIG"
+        echo "✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Global Git attributes
 # -----------------------------------------------------------------------------
 
