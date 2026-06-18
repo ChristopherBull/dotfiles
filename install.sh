@@ -42,24 +42,6 @@ JQ_DEEPMERGE='
 '
 
 # -----------------------------------------------------------------------------
-# Symlink configs
-# -----------------------------------------------------------------------------
-
-# echo "[core] Preparing symlink utilities"
-
-# link_file() {
-#     local source="$1"
-#     local target="$2"
-
-#     mkdir -p "$(dirname "$target")"
-#     ln -sf "$source" "$target"
-# }
-
-# Example config links
-# link_file "$DOTFILES_DIR/config/starship.toml" ~/.config/starship.toml
-# link_file "$DOTFILES_DIR/config/gitconfig" ~/.gitconfig
-
-# -----------------------------------------------------------------------------
 # Zsh setup
 # -----------------------------------------------------------------------------
 
@@ -202,12 +184,17 @@ if command -v starship >/dev/null 2>&1; then
             ;;
     esac
 
-    # Starship theme
-    STARSHIP_PRESET="${STARSHIP_PRESET:-no-runtime-versions}"
-    echo "...[starship] Configuring starship theme - preset: $STARSHIP_PRESET"
-    starship preset "$STARSHIP_PRESET" -o ~/.config/starship.toml
+    # Starship config
+    SOURCE_STARSHIP_CONFIG="$DOTFILES_DIR/.config/starship/starship.toml"
+    TARGET_STARSHIP_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
 
-    echo "✅ [starship] Configured"
+    if [[ ! -f "$SOURCE_STARSHIP_CONFIG" ]]; then
+        echo "⚠️ [starship] Missing source config: $SOURCE_STARSHIP_CONFIG; skipping"
+    else
+        mkdir -p "$(dirname "$TARGET_STARSHIP_CONFIG")"
+        ln -sf "$SOURCE_STARSHIP_CONFIG" "$TARGET_STARSHIP_CONFIG"
+        echo "✅ [starship] Config linked to $TARGET_STARSHIP_CONFIG"
+    fi
 else
     echo "⚠️ [starship] Not installed"
 fi
