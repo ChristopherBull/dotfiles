@@ -445,7 +445,8 @@ find_project_root() {
 }
 
 detect_languages() {
-    local root="${1:-$(find_project_root)}"
+    local root
+    root="$(find_project_root)"
 
     if [[ -f "$root/.mise.toml" ]]; then
         echo "...[lsp] Deriving languages from .mise.toml" >&2
