@@ -27,6 +27,7 @@ write_atomic() {
 }
 
 # Merges objects recursively (dotfiles wins on conflict) and unions arrays.
+# shellcheck disable=SC2016
 JQ_DEEPMERGE='
     def deepmerge($a; $b):
         if ($a | type) == "object" and ($b | type) == "object" then
@@ -329,6 +330,7 @@ echo "👻 Ghostty configuration"
 
 SOURCE_GHOSTTY_CONFIG="$DOTFILES_DIR/.config/ghostty/config.ghostty"
 
+# shellcheck disable=SC2016
 add_line_if_missing 'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' ~/.zshrc
 echo "✅ [ghostty] XDG_CONFIG_HOME set in ~/.zshrc"
 
