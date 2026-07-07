@@ -141,6 +141,73 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# GitHub CLI (gh)
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🐙 GitHub CLI (gh)"
+
+install_gh() {
+    echo "...[gh] Attempting installation"
+
+    if command -v brew >/dev/null 2>&1; then
+        echo "...[gh] Using Homebrew"
+        brew install gh
+
+    elif command -v apt-get >/dev/null 2>&1; then
+        # gh is absent from (or badly outdated in) default apt repos on many
+        # Debian/Ubuntu releases, so wire up the official repo per GitHub's docs.
+        echo "...[gh] Using apt-get (adding official GitHub CLI repo)"
+        sudo mkdir -p -m 755 /etc/apt/keyrings
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+        sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+        sudo mkdir -p -m 755 /etc/apt/sources.list.d
+        # shellcheck disable=SC1091
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages/stable/deb $(. /etc/os-release && echo "$VERSION_CODENAME") main" \
+            | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+        sudo apt-get update
+        sudo apt-get install -y gh
+
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "...[gh] Using dnf"
+        sudo dnf install -y gh
+
+    elif command -v yum >/dev/null 2>&1; then
+        echo "...[gh] Using yum"
+        sudo yum install -y gh
+
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "...[gh] Using pacman"
+        sudo pacman -S --noconfirm github-cli
+
+    else
+        echo "❌ [gh] No supported package manager found"
+        return 1
+    fi
+
+    echo "✅ [gh] Installed"
+}
+
+if command -v gh >/dev/null 2>&1; then
+    echo "✅ [gh] Already installed: $(gh --version | head -1)"
+else
+    echo "...[gh] Not found"
+    install_gh
+fi
+
+if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+        echo "✅ [gh] Authenticated"
+        echo "...[gh] Wiring git credential helper via gh auth setup-git"
+        gh auth setup-git || echo "⚠️ [gh] Failed to configure git credential helper"
+    else
+        echo "⚠️ [gh] Not authenticated"
+        echo "👉 [gh] Run: gh auth login"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Starship
 # -----------------------------------------------------------------------------
 

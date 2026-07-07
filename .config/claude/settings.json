@@ -8,6 +8,13 @@
       "Bash(git show:*)",
       "Bash(git branch:*)",
 
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh repo view:*)",
+
       "Bash(npm ci)",
       "Bash(npm install)",
       "Bash(npm outdated)",
