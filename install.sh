@@ -535,6 +535,40 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Claude Code personal skills
+# -----------------------------------------------------------------------------
+
+echo ""
+echo "🧩 Claude Code skills"
+
+SOURCE_SKILLS_DIR="$DOTFILES_DIR/.config/claude/skills"
+TARGET_SKILLS_DIR="$HOME/.claude/skills"
+
+if [[ ! -d "$SOURCE_SKILLS_DIR" ]]; then
+    echo "⚠️ [skills] Missing source dir: $SOURCE_SKILLS_DIR; skipping"
+else
+    mkdir -p "$TARGET_SKILLS_DIR"
+
+    # Symlink each skill subfolder individually rather than the whole skills
+    # dir, since $TARGET_SKILLS_DIR may already contain skills from elsewhere.
+    for skill_dir in "$SOURCE_SKILLS_DIR"/*/; do
+        [[ -d "$skill_dir" ]] || continue
+        skill_name="$(basename "$skill_dir")"
+        target="$TARGET_SKILLS_DIR/$skill_name"
+
+        if [[ -d "$target" && ! -L "$target" ]]; then
+            echo "⚠️ [skills] $skill_name already exists and isn't a symlink; skipping"
+            continue
+        fi
+
+        # -n treats an existing symlink as the file to replace rather than
+        # dereferencing it and dropping the new link inside the target dir.
+        ln -sfn "${skill_dir%/}" "$target"
+        echo "✅ [skills] Linked $skill_name"
+    done
+fi
+
+# -----------------------------------------------------------------------------
 # Language LSP plugins
 # -----------------------------------------------------------------------------
 

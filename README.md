@@ -79,6 +79,7 @@ precedence where it overlaps.
 | [`.config/git/attributes`](/.config/git/attributes) | `~/.config/git/attributes` | Git's default global attributes path (no `git config` needed). |
 | [`.config/claude/CLAUDE.md`](/.config/claude/CLAUDE.md) | `~/.claude/CLAUDE.md` | Claude Code user-scoped memory; layers under any repo `AGENTS.md`. |
 | [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist). |
+| [`.config/claude/skills/*`](/.config/claude/skills) | `~/.claude/skills/*` | Claude Code personal skills, auto-discovered from the user skills dir. |
 
 ### Git attributes
 
@@ -96,6 +97,9 @@ propagate. Per-repo `.gitattributes` still wins.
 - **`settings.json`** carries a conservative allowlist of named, predictable
   build/lint/test tools. It is **merged** into any existing `~/.claude/settings.json`
   (array union) via `jq`, so local entries are preserved.
+- **`skills/`** holds personal Claude Code skills, one subfolder each. Every
+  subfolder is symlinked individually into `~/.claude/skills/`, so unrelated
+  skills already installed there are left untouched.
 
 > [!NOTE]
 > A global allowlist applies to **every** repo you open, including unfamiliar
