@@ -7,7 +7,7 @@
 
   "dev.containers.defaultExtensions": [
     "anthropic.claude-code",
-    "Gruntfuggly.todo-tree",
+    "FanaticPythoner.better-todo-tree",
     "mhutchie.git-graph",
     "naumovs.color-highlight",
     "sst-dev.opencode"

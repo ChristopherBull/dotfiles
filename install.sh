@@ -323,56 +323,6 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# ripgrep (required by VS Code extension: Gruntfuggly.todo-tree)
-# -----------------------------------------------------------------------------
-
-echo ""
-echo "🔍 ripgrep"
-
-install_ripgrep() {
-    echo "...[rg] Attempting installation"
-
-    if command -v brew >/dev/null 2>&1; then
-        echo "...[rg] Using Homebrew"
-        brew install ripgrep
-
-    elif command -v apt-get >/dev/null 2>&1; then
-        echo "...[rg] Using apt-get"
-        sudo apt-get update
-        sudo apt-get install -y ripgrep
-
-    elif command -v dnf >/dev/null 2>&1; then
-        echo "...[rg] Using dnf"
-        sudo dnf install -y ripgrep
-
-    elif command -v yum >/dev/null 2>&1; then
-        echo "...[rg] Using yum"
-        sudo yum install -y ripgrep
-
-    elif command -v pacman >/dev/null 2>&1; then
-        echo "...[rg] Using pacman"
-        sudo pacman -S --noconfirm ripgrep
-
-    elif command -v winget >/dev/null 2>&1; then
-        echo "...[rg] Using winget"
-        winget install BurntSushi.ripgrep.MSVC
-
-    else
-        echo "❌ [rg] No supported package manager found"
-        return 1
-    fi
-
-    echo "✅ [rg] Installed"
-}
-
-if command -v rg >/dev/null 2>&1; then
-    echo "✅ [rg] Already installed: $(rg --version | head -1)"
-else
-    echo "...[rg] Not found"
-    install_ripgrep
-fi
-
-# -----------------------------------------------------------------------------
 # VS Code user settings
 # -----------------------------------------------------------------------------
 
