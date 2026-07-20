@@ -41,6 +41,10 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     cd ~/.dotfiles && ./install.sh
     ```
 
+    > [!NOTE]
+    > Each section (zsh, `gh`, Starship, VS Code, etc.) fails independently — an
+    > error in one won't stop the rest from installing.
+
 ## VS Code User Settings
 
 This repository includes a sample VS Code user settings file at [`.config/.vscode/user.settings.json`](/.config/.vscode/user.settings.json). This file is **not** automatically installed, but provides a set of recommended settings that complement the dotfiles and can impact your development environment. These settings are not guaranteed to sync across all VS Code instances, so you may need to manually copy them into your own `settings.json` if you want them applied.
