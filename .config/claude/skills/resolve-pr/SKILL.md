@@ -20,13 +20,38 @@ gh pr view --json number,url 2>/dev/null || gh pr create --fill
 
 `--fill` pulls the title/body from the branch's commits. If the commit history is messy, write a clean title and short body yourself instead of relying on it.
 
-## Step 2 — Wait for CI to run
+## Step 2 — Wait for CI using the `Monitor` tool
 
-```
-gh pr checks <number> --watch
+Never block the session on `gh pr checks --watch`, and never chain a `sleep` in front of a status check — foreground sleeps are blocked and the call gets rejected. Use `Monitor`, which runs a command in the background and feeds each line of its output back as an event, so the session stays usable while CI runs.
+
+Give it a script that stays quiet while checks are pending and prints once, when they settle. `gh pr checks` exits 8 while anything is still running, 0 when all pass, 1 when something failed, so the exit code is the whole state machine:
+
+```bash
+while :; do
+  gh pr checks <number> >/dev/null 2>&1; code=$?
+  [ "$code" -eq 8 ] || break
+  sleep 30
+done
+echo "CI settled (exit $code)"
+gh pr checks <number>
 ```
 
-This blocks until the current run finishes. If `--watch` isn't available, poll `gh pr checks <number>` every 20–30s instead.
+Set the inputs deliberately:
+
+- `description`: specific, e.g. `CI status for PR #33`. It labels every notification, which matters once more than one monitor is live.
+- `timeout_ms`: the default is 5 minutes, which most pipelines outrun. Set roughly twice the pipeline's usual duration; the ceiling is 1 hour (`3600000`).
+- Leave `persistent` unset. This watch should end when CI settles, not run to the end of the session.
+
+Rules that keep the watch well behaved:
+
+- Poll no faster than every 30s — it's a remote API call and rate limits apply.
+- Silence means "nothing to report". Print only on a state change, never once per poll; every line costs context.
+- Suffix anything that can fail transiently with `|| true` so one network blip doesn't kill the watch.
+- If you pipe through a filter, use `grep --line-buffered`, or pipe buffering will hold events back for minutes.
+- Don't use `pgrep -f "<cmdline>"` as the loop condition — the monitor's own bash process matches the pattern and the loop never exits.
+- Cancel the monitor with `TaskStop` as soon as the pass is done. A forgotten monitor burns context for nothing.
+
+If `Monitor` isn't available (it needs Claude Code v2.1.98+, and it's absent on Bedrock, Google Cloud's Agent Platform and Microsoft Foundry), fall back to running `gh pr checks <number> --watch` as a Bash call with `run_in_background: true`.
 
 ## Step 3 — The fix-and-batch loop
 
@@ -61,5 +86,6 @@ State the PR URL, final check status, how many passes it took, and anything deli
 
 ## Notes
 
+- Optional second monitor: while working through a pass, you can watch for reviewer comments arriving mid-flight by polling `gh api "repos/<owner>/<repo>/pulls/<number>/comments?since=$last"` on a 60s cycle and printing only new bodies. Only worth starting if a review is actively in progress — otherwise it's noise.
 - This skill never merges the PR — it only gets it ready. Merge only if the user explicitly asks for that separately.
 - Resolving a review thread and replying to inline comments are GraphQL/REST calls, not something `gh pr` wraps directly — see `references/github-graphql.md` for the exact commands.
