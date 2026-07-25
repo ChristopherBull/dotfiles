@@ -24,6 +24,8 @@ gh pr view --json number,url 2>/dev/null || gh pr create --fill
 
 Never block the session on `gh pr checks --watch`, and never chain a `sleep` in front of a status check — foreground sleeps are blocked and the call gets rejected. Use `Monitor`, which runs a command in the background and feeds each line of its output back as an event, so the session stays usable while CI runs.
 
+Don't put `--watch` inside the monitor either. Blocking isn't the objection there, since the monitor backgrounds it anyway — the objection is output shape. `--watch` reprints the whole check table every refresh, and the monitor turns each of those lines into an event. A ten-check pipeline running twenty minutes is hundreds of events all saying nothing has changed. The loop below prints one line, once.
+
 Give it a script that stays quiet while checks are pending and prints once, when they settle. `gh pr checks` exits 8 while anything is still running, 0 when all pass, 1 when something failed, so the exit code is the whole state machine:
 
 ```bash
@@ -51,7 +53,7 @@ Rules that keep the watch well behaved:
 - Don't use `pgrep -f "<cmdline>"` as the loop condition — the monitor's own bash process matches the pattern and the loop never exits.
 - Cancel the monitor with `TaskStop` as soon as the pass is done. A forgotten monitor burns context for nothing.
 
-If `Monitor` isn't available (it needs Claude Code v2.1.98+, and it's absent on Bedrock, Google Cloud's Agent Platform and Microsoft Foundry), fall back to running `gh pr checks <number> --watch` as a Bash call with `run_in_background: true`.
+If `Monitor` isn't available (it needs Claude Code v2.1.98+, and it's absent on Bedrock, Google Cloud's Agent Platform and Microsoft Foundry), fall back to running `gh pr checks <number> --watch --fail-fast --interval 30` as a Bash call with `run_in_background: true`. `--watch` is fine here precisely because background Bash isn't an event stream: the output sits in a buffer and only costs context when you go and read it, so the redraws are harmless. `--fail-fast` stops the watch on the first failure instead of waiting out the rest of the pipeline.
 
 ## Step 3 — The fix-and-batch loop
 
