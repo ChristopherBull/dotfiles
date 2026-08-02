@@ -501,6 +501,26 @@ section_claude_settings() {
         echo "✅ [claude] Linked $TARGET_CLAUDE_MD"
     fi
 
+    # --- Statusline script (wired up by settings.json below) ---
+    local SOURCE_STATUSLINE TARGET_STATUSLINE
+    SOURCE_STATUSLINE="$DOTFILES_DIR/.config/claude/statusline-command.sh"
+    TARGET_STATUSLINE="$HOME/.claude/statusline-command.sh"
+
+    if [[ ! -f "$SOURCE_STATUSLINE" ]]; then
+        echo "⚠️ [claude] Missing source: $SOURCE_STATUSLINE; skipping statusline"
+    else
+        mkdir -p "$(dirname "$TARGET_STATUSLINE")"
+        # Symlink — dotfiles fully owns this script, as with CLAUDE.md above.
+        ln -sf "$SOURCE_STATUSLINE" "$TARGET_STATUSLINE"
+        echo "✅ [claude] Linked $TARGET_STATUSLINE"
+
+        # The statusline renders nothing at all without jq; warn rather than let
+        # it fail silently on every refresh.
+        if ! command -v jq >/dev/null 2>&1; then
+            echo "⚠️ [claude] jq not installed; the statusline will stay blank until it is"
+        fi
+    fi
+
     # --- Global settings.json (allowlist; merged to preserve existing) ---
     local SOURCE_CLAUDE_SETTINGS TARGET_CLAUDE_SETTINGS
     SOURCE_CLAUDE_SETTINGS="$DOTFILES_DIR/.config/claude/settings.json"

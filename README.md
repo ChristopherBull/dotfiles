@@ -82,7 +82,8 @@ precedence where it overlaps.
 | --- | --- | --- |
 | [`.config/git/attributes`](/.config/git/attributes) | `~/.config/git/attributes` | Git's default global attributes path (no `git config` needed). |
 | [`.config/claude/CLAUDE.md`](/.config/claude/CLAUDE.md) | `~/.claude/CLAUDE.md` | Claude Code user-scoped memory; layers under any repo `AGENTS.md`. |
-| [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist). |
+| [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist, statusline). |
+| [`.config/claude/statusline-command.sh`](/.config/claude/statusline-command.sh) | `~/.claude/statusline-command.sh` | Claude Code statusline, wired up by `settings.json`. |
 | [`.config/claude/skills/*`](/.config/claude/skills) | `~/.claude/skills/*` | Claude Code personal skills, auto-discovered from the user skills dir. |
 
 ### Git attributes
@@ -99,8 +100,13 @@ propagate. Per-repo `.gitattributes` still wins.
   tool-agnostic `AGENTS.md` — so no Claude-specific file is ever committed to a
   project repo.
 - **`settings.json`** carries a conservative allowlist of named, predictable
-  build/lint/test tools. It is **merged** into any existing `~/.claude/settings.json`
-  (array union) via `jq`, so local entries are preserved.
+  build/lint/test tools, plus the statusline hook. It is **merged** into any
+  existing `~/.claude/settings.json` (array union) via `jq`, so local entries are
+  preserved.
+- **`statusline-command.sh`** renders the model, a context-window usage bar, and
+  usage bars for the 5-hour and weekly rate limits with their reset times in UK
+  time. It is symlinked, and `settings.json` invokes it via `$HOME` so the path
+  holds on any machine. Needs `jq`; without it the statusline stays blank.
 - **`skills/`** holds personal Claude Code skills, one subfolder each. Every
   subfolder is symlinked individually into `~/.claude/skills/`, so unrelated
   skills already installed there are left untouched.
