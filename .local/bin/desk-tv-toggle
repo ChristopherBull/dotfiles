@@ -69,22 +69,64 @@ switch_audio() {
     done
 }
 
+# KWin on Wayland only schedules a new frame in response to a buffer commit or
+# an input event. When the display change is triggered with no on-screen window
+# driving repaints (i.e. launched from the .desktop shortcut rather than a
+# terminal), the first page flip after the modeset can stall until an input
+# event arrives, leaving the whole session apparently frozen. Forcing the
+# compositor to reinitialise pushes fresh page flips and clears the stall. Only
+# meaningful under KWin; a no-op (best effort) anywhere qdbus6 is absent.
+nudge_compositor() {
+    command -v qdbus6 >/dev/null 2>&1 || return 0
+    qdbus6 org.kde.KWin /Compositor org.kde.kwin.Compositing.reinitialize \
+        >/dev/null 2>&1 || true
+}
+
+# Why this is two kscreen-doctor calls with a sleep, not one atomic switch:
+#
+# The obvious form is a single kscreen-doctor invocation that disables the old
+# outputs and enables the new ones together, so KWin applies it as one atomic
+# DRM commit. That works fine when run from a terminal, but when the same
+# command is launched from the .desktop shortcut (no on-screen window driving
+# repaints) it reliably wedges the compositor: the screen freezes and only
+# advances one frame per key press. The trigger is the single commit that
+# removes the only currently-active output at the same moment it adds the new
+# ones. KWin's "sole active output replaced in one commit" path is fragile and
+# the first post-modeset page flip never completes.
+#
+# So instead: first commit brings the target outputs up (now there are extra
+# live outputs, a safe change), then — after a short pause to let that modeset
+# settle and present a frame — a second commit takes the old outputs down.
+# There is always a live output across the transition, so the fragile path is
+# never hit. The sleep is the settle gap between the two modesets; ~1s is
+# imperceptible in this workflow and generous enough for a slow HDMI modeset.
+#
+# The TV's HDR mode is toggled in the same direction as its own output (off
+# before the TV goes down, on as it comes up) so the 4K/HDR pipeline is never
+# set up or torn down in the same commit as an output moving the other way.
 to_desk() {
     kscreen-doctor \
-        output."$TV_OUTPUT".disable \
         output."${DESK_OUTPUTS[0]}".enable \
         output."${DESK_OUTPUTS[1]}".enable
+    sleep 1  # let the "desk outputs up" modeset settle before removing the TV
+    kscreen-doctor \
+        output."$TV_OUTPUT".hdr.disable \
+        output."$TV_OUTPUT".disable
     switch_audio desk
+    nudge_compositor
     echo "Switched to desk monitors (Philips + Dell)"
 }
 
 to_tv() {
     kscreen-doctor \
-        output."${DESK_OUTPUTS[0]}".disable \
-        output."${DESK_OUTPUTS[1]}".disable \
         output."$TV_OUTPUT".enable \
         output."$TV_OUTPUT".hdr.enable
+    sleep 1  # let the "TV up" modeset settle before removing the desk outputs
+    kscreen-doctor \
+        output."${DESK_OUTPUTS[0]}".disable \
+        output."${DESK_OUTPUTS[1]}".disable
     switch_audio tv
+    nudge_compositor
     echo "Switched to LG TV"
 }
 
