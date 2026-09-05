@@ -4,6 +4,29 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Hosts that stay on a minimal shell setup on purpose: no Starship, prompt
+# left as the shell's own default. Zsh install/default-shell handling isn't
+# part of this — that's gated separately by whether fish is installed.
+# Override with DOTFILES_MINIMAL_SHELL=1 (force minimal) or =0 (force full)
+# on any host, e.g. if this hostname ever changes.
+MINIMAL_SHELL_HOSTS=("cachyos")
+
+is_minimal_shell_host() {
+    if [[ -n "${DOTFILES_MINIMAL_SHELL:-}" ]]; then
+        [[ "$DOTFILES_MINIMAL_SHELL" == "1" ]]
+        return
+    fi
+
+    local host
+    host="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || true)"
+
+    local candidate
+    for candidate in "${MINIMAL_SHELL_HOSTS[@]}"; do
+        [[ "$host" == "$candidate" ]] && return 0
+    done
+    return 1
+}
+
 # -----------------------------------------------------------------------------
 # Start
 # -----------------------------------------------------------------------------
@@ -265,6 +288,11 @@ section_gh || echo "⚠️ [gh] Section encountered an error; continuing with th
 section_starship() {
     echo ""
     echo "🔧 Starship configuration"
+
+    if is_minimal_shell_host; then
+        echo "⏭️ [starship] Skipping on this host (minimal shell profile); unset DOTFILES_MINIMAL_SHELL or edit MINIMAL_SHELL_HOSTS to opt back in"
+        return
+    fi
 
     if ! command -v starship >/dev/null 2>&1; then
         echo "⚠️ [starship] Not installed"
