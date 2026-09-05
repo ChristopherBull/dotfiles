@@ -455,6 +455,38 @@ section_ghostty() {
 section_ghostty || echo "⚠️ [ghostty] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# User scripts (~/.local/bin)
+# -----------------------------------------------------------------------------
+
+section_local_bin() {
+    echo ""
+    echo "📜 User scripts"
+
+    local SOURCE_BIN_DIR TARGET_BIN_DIR
+    SOURCE_BIN_DIR="$DOTFILES_DIR/.local/bin"
+    TARGET_BIN_DIR="$HOME/.local/bin"
+
+    if [[ ! -d "$SOURCE_BIN_DIR" ]]; then
+        echo "⚠️ [bin] Missing source dir: $SOURCE_BIN_DIR; skipping"
+        return
+    fi
+
+    mkdir -p "$TARGET_BIN_DIR"
+
+    local script name target
+    for script in "$SOURCE_BIN_DIR"/*; do
+        [[ -f "$script" ]] || continue
+        name="$(basename "$script")"
+        target="$TARGET_BIN_DIR/$name"
+        ln -sf "$script" "$target"
+        chmod +x "$script"
+        echo "✅ [bin] Linked $target"
+    done
+}
+
+section_local_bin || echo "⚠️ [bin] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Global Git attributes
 # -----------------------------------------------------------------------------
 
