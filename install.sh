@@ -35,6 +35,30 @@ add_line_if_missing() {
     grep -qxF "$line" "$file" || echo "$line" >> "$file"
 }
 
+# Appends the shell-appropriate line to every installed shell's rc file,
+# rather than guessing a single "current" shell — a machine can run more than
+# one side by side (e.g. zsh in a devcontainer, fish at the desktop). Pass ""
+# for a shell to skip it.
+configure_for_installed_shells() {
+    local label="$1" bash_line="$2" zsh_line="$3" fish_line="$4"
+
+    if [[ -n "$bash_line" ]] && command -v bash >/dev/null 2>&1; then
+        add_line_if_missing "$bash_line" ~/.bashrc
+        echo "✅ [$label] Configured for bash (~/.bashrc)"
+    fi
+
+    if [[ -n "$zsh_line" ]] && command -v zsh >/dev/null 2>&1; then
+        add_line_if_missing "$zsh_line" ~/.zshrc
+        echo "✅ [$label] Configured for zsh (~/.zshrc)"
+    fi
+
+    if [[ -n "$fish_line" ]] && command -v fish >/dev/null 2>&1; then
+        mkdir -p ~/.config/fish
+        add_line_if_missing "$fish_line" ~/.config/fish/config.fish
+        echo "✅ [$label] Configured for fish (~/.config/fish/config.fish)"
+    fi
+}
+
 # Merges objects recursively (dotfiles wins on conflict) and unions arrays.
 # shellcheck disable=SC2016
 JQ_DEEPMERGE='
@@ -242,51 +266,30 @@ section_starship() {
     echo ""
     echo "🔧 Starship configuration"
 
-    if command -v starship >/dev/null 2>&1; then
-
-        local LOGIN_SHELL RESOLVED_LOGIN_SHELL
-        LOGIN_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
-        RESOLVED_LOGIN_SHELL="$(basename "$LOGIN_SHELL")"
-
-        echo "...[starship] Login shell: $LOGIN_SHELL"
-        echo "...[starship] Using: $RESOLVED_LOGIN_SHELL"
-
-        # shellcheck disable=SC2016
-        # Single quotes are intentional: write the literal `eval "$(starship init …)"`
-        # line into the rc file so it runs at every shell startup, not at install time.
-        case "$RESOLVED_LOGIN_SHELL" in
-            bash)
-                echo "...[starship] Configuring bash integration"
-                add_line_if_missing 'eval "$(starship init bash)"' ~/.bashrc
-                ;;
-
-            zsh)
-                echo "...[starship] Configuring zsh integration"
-                add_line_if_missing 'eval "$(starship init zsh)"' ~/.zshrc
-                ;;
-
-            *)
-                echo "⚠️ [starship] Unknown shell: $RESOLVED_LOGIN_SHELL"
-                echo "...[starship] Falling back to bash + zsh config"
-                add_line_if_missing 'eval "$(starship init bash)"' ~/.bashrc
-                add_line_if_missing 'eval "$(starship init zsh)"' ~/.zshrc
-                ;;
-        esac
-
-        # Starship config
-        local SOURCE_STARSHIP_CONFIG TARGET_STARSHIP_CONFIG
-        SOURCE_STARSHIP_CONFIG="$DOTFILES_DIR/.config/starship/starship.toml"
-        TARGET_STARSHIP_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
-
-        if [[ ! -f "$SOURCE_STARSHIP_CONFIG" ]]; then
-            echo "⚠️ [starship] Missing source config: $SOURCE_STARSHIP_CONFIG; skipping"
-        else
-            mkdir -p "$(dirname "$TARGET_STARSHIP_CONFIG")"
-            ln -sf "$SOURCE_STARSHIP_CONFIG" "$TARGET_STARSHIP_CONFIG"
-            echo "✅ [starship] Config linked to $TARGET_STARSHIP_CONFIG"
-        fi
-    else
+    if ! command -v starship >/dev/null 2>&1; then
         echo "⚠️ [starship] Not installed"
+        return
+    fi
+
+    # shellcheck disable=SC2016
+    # Single quotes are intentional: write the literal init line into each rc
+    # file so it runs at every shell startup, not at install time.
+    configure_for_installed_shells "starship" \
+        'eval "$(starship init bash)"' \
+        'eval "$(starship init zsh)"' \
+        'starship init fish | source'
+
+    # Starship config
+    local SOURCE_STARSHIP_CONFIG TARGET_STARSHIP_CONFIG
+    SOURCE_STARSHIP_CONFIG="$DOTFILES_DIR/.config/starship/starship.toml"
+    TARGET_STARSHIP_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
+
+    if [[ ! -f "$SOURCE_STARSHIP_CONFIG" ]]; then
+        echo "⚠️ [starship] Missing source config: $SOURCE_STARSHIP_CONFIG; skipping"
+    else
+        mkdir -p "$(dirname "$TARGET_STARSHIP_CONFIG")"
+        ln -sf "$SOURCE_STARSHIP_CONFIG" "$TARGET_STARSHIP_CONFIG"
+        echo "✅ [starship] Config linked to $TARGET_STARSHIP_CONFIG"
     fi
 }
 
@@ -438,8 +441,10 @@ section_ghostty() {
     SOURCE_GHOSTTY_CONFIG="$DOTFILES_DIR/.config/ghostty/config.ghostty"
 
     # shellcheck disable=SC2016
-    add_line_if_missing 'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' ~/.zshrc
-    echo "✅ [ghostty] XDG_CONFIG_HOME set in ~/.zshrc"
+    configure_for_installed_shells "ghostty" \
+        'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' \
+        'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' \
+        'set -q XDG_CONFIG_HOME; or set -gx XDG_CONFIG_HOME $HOME/.config'
 
     if [[ ! -f "$SOURCE_GHOSTTY_CONFIG" ]]; then
         echo "⚠️ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
