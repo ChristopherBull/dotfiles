@@ -59,6 +59,11 @@ section_zsh() {
     echo ""
     echo "🐚 Zsh setup"
 
+    if command -v fish >/dev/null 2>&1; then
+        echo "⏭️ [zsh] Fish is installed; skipping zsh install and default-shell check"
+        return
+    fi
+
     install_zsh() {
         echo "...[zsh] Attempting installation"
 
