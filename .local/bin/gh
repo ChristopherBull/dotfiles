@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Wraps the real `gh`. Inside a VS Code devcontainer it hands `gh` the host's
+# GitHub credential, fetched through the git credential helper VS Code
+# forwards, so no token ever has to be stored inside the container
+# (`gh auth login` would write one to ~/.config/gh/hosts.yml in plain text).
+# Everywhere else it is a transparent pass-through.
+set -euo pipefail
+
+self="$(readlink -f "${BASH_SOURCE[0]}")"
+
+real_gh=""
+IFS=: read -ra path_dirs <<< "$PATH"
+for dir in "${path_dirs[@]}"; do
+    candidate="$dir/gh"
+    [[ -x "$candidate" && "$(readlink -f "$candidate")" != "$self" ]] || continue
+    real_gh="$candidate"
+    break
+done
+
+if [[ -z "$real_gh" ]]; then
+    echo "gh: no real gh found on PATH besides this wrapper ($self)" >&2
+    exit 127
+fi
+
+# GH_WRAPPER_ACTIVE guards against recursion should git's credential helper
+# itself be `gh auth git-credential`. An existing GH_TOKEN/GITHUB_TOKEN (e.g.
+# Codespaces, CI) always wins.
+if [[ "${REMOTE_CONTAINERS:-}" != "true" || -n "${GH_WRAPPER_ACTIVE:-}" \
+    || -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]]; then
+    exec "$real_gh" "$@"
+fi
+
+# gh refuses to manage stored accounts while GH_TOKEN is set.
+if [[ "${1:-}" == "auth" ]]; then
+    case "${2:-}" in
+        login | logout | refresh | switch) exec "$real_gh" "$@" ;;
+    esac
+fi
+
+token="$(printf 'protocol=https\nhost=github.com\n\n' \
+    | GH_WRAPPER_ACTIVE=1 GIT_TERMINAL_PROMPT=0 git credential fill 2>/dev/null \
+    | sed -n 's/^password=//p' || true)"
+
+if [[ -n "$token" ]]; then
+    GH_TOKEN="$token" exec "$real_gh" "$@"
+fi
+exec "$real_gh" "$@"
