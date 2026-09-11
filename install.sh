@@ -270,11 +270,22 @@ section_gh() {
     if command -v gh >/dev/null 2>&1; then
         if gh auth status >/dev/null 2>&1; then
             echo "✅ [gh] Authenticated"
-            echo "...[gh] Wiring git credential helper via gh auth setup-git"
-            gh auth setup-git || echo "⚠️ [gh] Failed to configure git credential helper"
         else
             echo "⚠️ [gh] Not authenticated"
             echo "👉 [gh] Run: gh auth login"
+            return
+        fi
+
+        # In a VS Code devcontainer git already uses the credential helper VS
+        # Code forwards from the host, and the ~/.local/bin/gh wrapper borrows
+        # its token from that helper. setup-git would replace it for github.com
+        # with the real gh, which stores no token in the container, leaving
+        # both git and gh without credentials.
+        if [[ "${REMOTE_CONTAINERS:-}" == "true" ]]; then
+            echo "⏭️ [gh] Devcontainer detected; keeping VS Code's forwarded git credential helper"
+        else
+            echo "...[gh] Wiring git credential helper via gh auth setup-git"
+            gh auth setup-git || echo "⚠️ [gh] Failed to configure git credential helper"
         fi
     fi
 }
