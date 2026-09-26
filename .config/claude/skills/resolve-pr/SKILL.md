@@ -53,6 +53,18 @@ Rules that keep the watch well behaved:
 - Don't use `pgrep -f "<cmdline>"` as the loop condition — the monitor's own bash process matches the pattern and the loop never exits.
 - Cancel the monitor with `TaskStop` as soon as the pass is done. A forgotten monitor burns context for nothing.
 
+### Wait for requested reviews too
+
+CI going green is not the only thing to wait for. Repositories often request a review automatically when a PR opens or is pushed to (for example Copilot code review, via a ruleset, which then appears as requested by the PR author). These reviews take a few minutes and can arrive after CI has finished, so a PR that looks clean the moment CI settles may be about to get findings.
+
+Before treating a pass as finished, use `gh` to check whether any review has been requested and not yet submitted:
+
+- A review is pending when there is a review request for a reviewer (person, team or bot) with no review from that reviewer submitted after the request.
+- Don't rely on a single field such as `gh pr view --json reviewRequests`: it can come back empty while a bot's review is still being generated. The PR's timeline (`gh api graphql`, `timelineItems` with review-requested events and submitted reviews) shows both the request and the review with timestamps, so compare them.
+- Re-check after every push, because a push can trigger a fresh automatic review.
+
+If a review is pending, extend the monitor (or start a second one) to stay quiet until that review is submitted, then pick up its threads in Step 3. Don't wait forever: if a requested review hasn't arrived after roughly 15 minutes, report it as still pending rather than looping.
+
 If `Monitor` isn't available (it needs Claude Code v2.1.98+, and it's absent on Bedrock, Google Cloud's Agent Platform and Microsoft Foundry), fall back to running `gh pr checks <number> --watch --fail-fast --interval 30` as a Bash call with `run_in_background: true`. `--watch` is fine here precisely because background Bash isn't an event stream: the output sits in a buffer and only costs context when you go and read it, so the redraws are harmless. `--fail-fast` stops the watch on the first failure instead of waiting out the rest of the pipeline.
 
 ## Step 3 — The fix-and-batch loop
@@ -65,7 +77,7 @@ gh pr checks <number>
 ```
 plus the PR's unresolved review threads (query in `references/github-graphql.md` — resolved/already-replied threads don't block, so filter for `isResolved: false`).
 
-**b. If checks are all green and there are no unresolved threads, stop — the PR is done.**
+**b. If checks are all green, no requested review is still pending (see "Wait for requested reviews too"), and there are no unresolved threads, stop — the PR is done.** A pending review means the PR is not done yet, even with green CI and no threads.
 
 **c. Otherwise, work through everything outstanding in this pass:**
 - For each failing check: pull its logs (`gh run view <run-id> --log-failed`), diagnose the cause, make the fix, and commit it on its own — one commit per distinct fix, with a message describing what it addresses. Don't push yet.
@@ -80,14 +92,14 @@ Never push after each individual commit — that defeats the point of batching. 
 
 Then go back to Step 2 to wait for the new run triggered by this push, then back to (a).
 
-**Stop and report to the user, rather than looping further, if:** the PR is clean (success); the 5-pass cap is hit; or a check is failing for a reason that isn't a code problem you can act on (flaky infra, missing secrets/permissions, external service down) — don't keep committing speculative fixes against something you can't actually diagnose.
+**Stop and report to the user, rather than looping further, if:** the PR is clean, with no pending review (success); the 5-pass cap is hit; or a check is failing for a reason that isn't a code problem you can act on (flaky infra, missing secrets/permissions, external service down) — don't keep committing speculative fixes against something you can't actually diagnose.
 
 ## Step 4 — Final report
 
-State the PR URL, final check status, how many passes it took, and anything deliberately left open (unresolved threads, checks you couldn't fix) so nothing is silently dropped.
+State the PR URL, final check status, which requested reviews were received (or are still pending), how many passes it took, and anything deliberately left open (unresolved threads, checks you couldn't fix, a review that never arrived) so nothing is silently dropped.
 
 ## Notes
 
 - Optional second monitor: while working through a pass, you can watch for reviewer comments arriving mid-flight by polling `gh api "repos/<owner>/<repo>/pulls/<number>/comments?since=$last"` on a 60s cycle and printing only new bodies. Only worth starting if a review is actively in progress — otherwise it's noise.
-- This skill never merges the PR — it only gets it ready. Merge only if the user explicitly asks for that separately.
+- This skill never merges the PR — it only gets it ready. Merge only if the user explicitly asks for that separately, and even then not while a requested review is still pending: merging first means its findings land on a closed PR.
 - Resolving a review thread and replying to inline comments are GraphQL/REST calls, not something `gh pr` wraps directly — see `references/github-graphql.md` for the exact commands.
