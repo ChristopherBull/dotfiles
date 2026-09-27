@@ -110,6 +110,12 @@ propagate. Per-repo `.gitattributes` still wins.
 - **`skills/`** holds personal Claude Code skills, one subfolder each. Every
   subfolder is symlinked individually into `~/.claude/skills/`, so unrelated
   skills already installed there are left untouched.
+- **Auto-update in Dev Containers.** Features run as root, so a Claude Code
+  feature added through `dev.containers.defaultFeatures` leaves its global npm
+  package root-owned, and the auto-updater fails with "no write permission to
+  npm prefix". In a Dev Container or Codespace, `install.sh` gives the package
+  (`$(npm root -g)/@anthropic-ai`) to the remote user with `sudo chown`, so
+  Claude Code can update itself while the feature's image layer stays cached.
 
 > [!NOTE]
 > A global allowlist applies to **every** repo you open, including unfamiliar

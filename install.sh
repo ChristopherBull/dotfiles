@@ -561,6 +561,45 @@ section_git_attrs() {
 section_git_attrs || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# Claude Code auto-update in devcontainers
+# -----------------------------------------------------------------------------
+
+section_claude_update() {
+    echo ""
+    echo "🔄 Claude Code auto-update"
+
+    # Devcontainer features run as root, so the Claude Code feature's global npm
+    # install leaves the package root-owned and not group-writable, even though
+    # the npm prefix around it belongs to the remote user. The auto-updater then
+    # fails with "no write permission to npm prefix". Hand the package to the
+    # remote user; the feature's cached image layer is left alone.
+    if [[ "${REMOTE_CONTAINERS:-}" != "true" && "${CODESPACES:-}" != "true" ]]; then
+        echo "⏭️ [claude] Not a devcontainer; skipping"
+        return
+    fi
+    if ! command -v npm >/dev/null 2>&1; then
+        echo "⏭️ [claude] npm not installed; skipping"
+        return
+    fi
+
+    local PACKAGE_DIR
+    PACKAGE_DIR="$(npm root -g)/@anthropic-ai"
+
+    if [[ ! -d "$PACKAGE_DIR" ]]; then
+        echo "⏭️ [claude] Not installed through npm; skipping"
+    elif [[ -z "$(find "$PACKAGE_DIR" ! -user "$(id -u)" -print -quit)" ]]; then
+        echo "✅ [claude] $PACKAGE_DIR already belongs to $(id -un)"
+    elif ! sudo -n true 2>/dev/null; then
+        echo "⚠️ [claude] $PACKAGE_DIR isn't yours and sudo needs a password; auto-update will fail"
+    else
+        sudo chown -R "$(id -u):$(id -g)" "$PACKAGE_DIR"
+        echo "✅ [claude] Gave $PACKAGE_DIR to $(id -un), so Claude Code can update itself"
+    fi
+}
+
+section_claude_update || echo "⚠️ [claude] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Global Claude Code settings
 # -----------------------------------------------------------------------------
 
