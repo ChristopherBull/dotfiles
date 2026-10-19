@@ -634,6 +634,13 @@ section_claude_settings() {
         ln -sf "$SOURCE_STATUSLINE" "$TARGET_STATUSLINE"
         echo "✅ [claude] Linked $TARGET_STATUSLINE"
 
+        # The gate that long tasks run before starting a unit of work; it reads the
+        # rate-limit cache the statusline writes on every refresh.
+        if [[ -f "$DOTFILES_DIR/.config/claude/usage-gate.sh" ]]; then
+            ln -sf "$DOTFILES_DIR/.config/claude/usage-gate.sh" "$HOME/.claude/usage-gate.sh"
+            echo "✅ [claude] Linked $HOME/.claude/usage-gate.sh"
+        fi
+
         # The statusline renders nothing at all without jq; warn rather than let
         # it fail silently on every refresh.
         if ! command -v jq >/dev/null 2>&1; then

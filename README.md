@@ -84,6 +84,7 @@ precedence where it overlaps.
 | [`.config/claude/CLAUDE.md`](/.config/claude/CLAUDE.md) | `~/.claude/CLAUDE.md` | Claude Code user-scoped memory; layers under any repo `AGENTS.md`. |
 | [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist, statusline). |
 | [`.config/claude/statusline-command.sh`](/.config/claude/statusline-command.sh) | `~/.claude/statusline-command.sh` | Claude Code statusline, wired up by `settings.json`. |
+| [`.config/claude/usage-gate.sh`](/.config/claude/usage-gate.sh) | `~/.claude/usage-gate.sh` | Exits non-zero when the 5-hour window is past a limit (default 80%), so long tasks don't start a new piece of work without enough left. |
 | [`.config/claude/skills/*`](/.config/claude/skills) | `~/.claude/skills/*` | Claude Code personal skills, auto-discovered from the user skills dir. |
 
 ### Git attributes
@@ -107,6 +108,8 @@ propagate. Per-repo `.gitattributes` still wins.
   usage bars for the 5-hour and weekly rate limits with their reset times in UK
   time. It is symlinked, and `settings.json` invokes it via `$HOME` so the path
   holds on any machine. Needs `jq`; without it the statusline stays blank.
+  Each refresh also writes the latest rate limits to
+  `~/.claude/cache/rate-limits.json`, which `usage-gate.sh [max-percent]` reads.
 - **`skills/`** holds personal Claude Code skills, one subfolder each. Every
   subfolder is symlinked individually into `~/.claude/skills/`, so unrelated
   skills already installed there are left untouched.

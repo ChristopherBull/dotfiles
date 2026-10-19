@@ -18,6 +18,9 @@ GREEN='\033[32m'
 YELLOW='\033[33m'
 RED='\033[31m'
 
+# Keep the latest rate limits where a session can read them, to pace long tasks.
+printf '%s' "$input" | jq -c '{rate_limits, at: now}' >"$HOME/.claude/cache/rate-limits.json" 2>/dev/null
+
 model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"')
 
 # Renders a 10-cell block-character progress bar for a 0-100 percentage.
