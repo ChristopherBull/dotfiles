@@ -781,13 +781,13 @@ section_lsp() {
         [[ -f "$root/go.mod" ]] && echo go
     }
 
-    # Plugin registry: maps language → plugin name for Claude Code (claude plugins install <name>).
+    # Plugin registry: maps language → plugin name in the claude-plugins-official marketplace.
     # Extend here without touching detection logic.
     local -A CLAUDE_PLUGINS=(
         [python]="pyright-lsp"
         [node]="typescript-lsp"
-        [rust]="rust-analyzer"
-        [go]="gopls"
+        [rust]="rust-analyzer-lsp"
+        [go]="gopls-lsp"
     )
 
     # LSP server configs for OpenCode, merged into opencode.json under the "lsp" key.
@@ -808,8 +808,10 @@ section_lsp() {
 
         plugin="${CLAUDE_PLUGINS[$lang]}"
         echo "...[lsp] Installing Claude plugin for $lang: $plugin"
-        # claude prints its own success line; only surface failures ourselves
-        claude plugins install "$plugin" || echo "⚠️ [lsp] claude: failed to install $plugin"
+        # claude prints its own success line; only surface failures ourselves.
+        # Name the marketplace: unqualified names can resolve to the plugin directory instead,
+        # installing a second copy beside the one settings.json enables.
+        claude plugins install "$plugin@claude-plugins-official" || echo "⚠️ [lsp] claude: failed to install $plugin"
     }
 
     configure_opencode_lsp() {
