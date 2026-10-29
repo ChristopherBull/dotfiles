@@ -83,7 +83,7 @@ process applies to any package manager (see Other Ecosystems).
 |---|---|---|---|
 | npm | `npm outdated` | `npm audit` | `npm install pkg@x.y.z` |
 | pnpm | `pnpm outdated` | `pnpm audit` | `pnpm add pkg@x.y.z` |
-| Yarn | `yarn outdated` | `yarn npm audit` | `yarn add pkg@x.y.z` |
+| Yarn | `yarn outdated` (v1) / `yarn upgrade-interactive` (v2+) | `yarn audit` (v1) / `yarn npm audit` (v2+) | `yarn add pkg@x.y.z` |
 | Poetry/pip | `poetry show --outdated` | `pip-audit` | `poetry add pkg@x.y.z` |
 | Cargo | `cargo outdated` | `cargo audit` | `cargo add pkg@x.y.z` |
 | Bundler | `bundle outdated` | `bundle audit` | `bundle add pkg -v x.y.z` |
