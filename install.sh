@@ -628,6 +628,38 @@ section_git_attrs() {
 section_git_attrs || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# Git identity
+# -----------------------------------------------------------------------------
+
+section_git_identity() {
+    echo ""
+    echo "🪪 Git identity"
+
+    if ! command -v git >/dev/null 2>&1; then
+        echo "⏭️ [git] Not installed; skipping"
+        return
+    fi
+
+    # Only warn: the identity is personal, so it isn't kept in the dotfiles.
+    local key value missing=0
+    for key in user.name user.email; do
+        value="$(git config --get "$key" || true)"
+        if [[ -n "$value" ]]; then
+            echo "✅ [git] $key: $value"
+        else
+            echo "⚠️ [git] $key not set; commits will fail until it is"
+            missing=1
+        fi
+    done
+
+    if [[ "$missing" == 1 ]]; then
+        echo "👉 [git] Run: git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\""
+    fi
+}
+
+section_git_identity || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Claude Code install
 # -----------------------------------------------------------------------------
 
