@@ -192,12 +192,19 @@ section_zsh() {
                     fi
                 fi
 
-                chsh -s "$ZSH_PATH" "$USER" || {
+                if chsh -s "$ZSH_PATH" "$USER"; then
+                    echo "...[shell] Post-change shell: $(getent passwd "$USER" | cut -d: -f7)"
+                    # chsh only affects new logins. WSL keeps the distro (and any VS Code
+                    # server) running with the old $SHELL until it's restarted.
+                    if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
+                        echo "👉 [shell] Restart WSL to pick it up: wsl.exe --terminate $WSL_DISTRO_NAME"
+                    else
+                        echo "👉 [shell] Log out and back in to pick it up"
+                    fi
+                else
                     echo "⚠️ [shell] chsh failed"
                     echo "👉 [shell] Run: chsh -s $ZSH_PATH"
-                }
-
-                echo "...[shell] Post-change shell: $(getent passwd "$USER" | cut -d: -f7)"
+                fi
             fi
         fi
     else
