@@ -581,6 +581,37 @@ section_git_attrs() {
 section_git_attrs || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# Claude Code install
+# -----------------------------------------------------------------------------
+
+section_claude_install() {
+    echo ""
+    echo "🤖 Claude Code install"
+
+    if command -v claude >/dev/null 2>&1; then
+        echo "✅ [claude] Already installed: $(claude --version)"
+        return
+    fi
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "⚠️ [claude] curl not installed; skipping"
+        return
+    fi
+
+    echo "...[claude] Not found; running the native installer"
+    curl -fsSL https://claude.ai/install.sh | bash
+
+    # The installer puts claude in ~/.local/bin, which section_local_bin has
+    # already added to PATH for this script and every installed shell.
+    if command -v claude >/dev/null 2>&1; then
+        echo "✅ [claude] Installed: $(claude --version)"
+    else
+        echo "⚠️ [claude] Installer finished but claude isn't on PATH"
+    fi
+}
+
+section_claude_install || echo "⚠️ [claude] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Claude Code auto-update in devcontainers
 # -----------------------------------------------------------------------------
 
