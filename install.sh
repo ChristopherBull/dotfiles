@@ -94,18 +94,18 @@ configure_for_installed_shells() {
 
     if [[ -n "$bash_line" ]] && command -v bash >/dev/null 2>&1; then
         add_line_if_missing "$bash_line" ~/.bashrc
-        echo "✅ [$label] Configured for bash (~/.bashrc)"
+        echo "  ✅ [$label] Configured for bash (~/.bashrc)"
     fi
 
     if [[ -n "$zsh_line" ]] && command -v zsh >/dev/null 2>&1; then
         add_line_if_missing "$zsh_line" ~/.zshrc
-        echo "✅ [$label] Configured for zsh (~/.zshrc)"
+        echo "  ✅ [$label] Configured for zsh (~/.zshrc)"
     fi
 
     if [[ -n "$fish_line" ]] && command -v fish >/dev/null 2>&1; then
         mkdir -p ~/.config/fish
         add_line_if_missing "$fish_line" ~/.config/fish/config.fish
-        echo "✅ [$label] Configured for fish (~/.config/fish/config.fish)"
+        echo "  ✅ [$label] Configured for fish (~/.config/fish/config.fish)"
     fi
 }
 
@@ -134,33 +134,33 @@ as_root() {
 install_package() {
     local label="$1" pkg="$2" rpm_pkg="${3:-$2}"
 
-    echo "...[$label] Attempting installation"
+    echo "  ...[$label] Attempting installation"
 
     if command -v brew >/dev/null 2>&1; then
-        echo "...[$label] Using Homebrew"
+        echo "  ...[$label] Using Homebrew"
         brew install "$pkg" || return 1
     elif ! can_root; then
-        echo "⚠️ [$label] Installing needs root; $ROOT_HINT"
+        echo "  ❗ [$label] Installing needs root; $ROOT_HINT"
         return 1
     elif command -v apt-get >/dev/null 2>&1; then
-        echo "...[$label] Using apt-get"
+        echo "  ...[$label] Using apt-get"
         as_root apt-get update -q || return 1
         as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -q "$pkg" || return 1
     elif command -v dnf >/dev/null 2>&1; then
-        echo "...[$label] Using dnf"
+        echo "  ...[$label] Using dnf"
         as_root dnf install -y "$rpm_pkg" || return 1
     elif command -v yum >/dev/null 2>&1; then
-        echo "...[$label] Using yum"
+        echo "  ...[$label] Using yum"
         as_root yum install -y "$rpm_pkg" || return 1
     elif command -v pacman >/dev/null 2>&1; then
-        echo "...[$label] Using pacman"
+        echo "  ...[$label] Using pacman"
         as_root pacman -S --noconfirm --needed "$pkg" || return 1
     else
-        echo "❌ [$label] No supported package manager found"
+        echo "  ❌ [$label] No supported package manager found"
         return 1
     fi
 
-    echo "✅ [$label] Installed"
+    echo "  ✅ [$label] Installed"
 }
 
 # Merges objects recursively (dotfiles wins on conflict) and unions arrays.
@@ -192,7 +192,7 @@ section_local_bin() {
     TARGET_BIN_DIR="$HOME/.local/bin"
 
     if [[ ! -d "$SOURCE_BIN_DIR" ]]; then
-        echo "⚠️ [bin] Missing source dir: $SOURCE_BIN_DIR; skipping"
+        echo "  ❗ [bin] Missing source dir: $SOURCE_BIN_DIR; skipping"
         return
     fi
 
@@ -205,7 +205,7 @@ section_local_bin() {
         target="$TARGET_BIN_DIR/$name"
         ln -sf "$script" "$target"
         chmod +x "$script"
-        echo "✅ [bin] Linked $target"
+        echo "  ✅ [bin] Linked $target"
     done
 
     # Ubuntu's ~/.profile adds ~/.local/bin only if it existed at login, and zsh
@@ -222,7 +222,7 @@ section_local_bin() {
     esac
 }
 
-section_local_bin || echo "⚠️ [bin] Section encountered an error; continuing with the rest of the install"
+section_local_bin || echo "  ❗ [bin] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Zsh setup
@@ -233,14 +233,14 @@ section_zsh() {
     echo "🐚 Zsh setup"
 
     if command -v fish >/dev/null 2>&1; then
-        echo "⏭️ [zsh] Fish is installed; skipping zsh install and default-shell check"
+        echo "  ⏩ [zsh] Fish is installed; skipping zsh install and default-shell check"
         return
     fi
 
     if command -v zsh >/dev/null 2>&1; then
-        echo "✅ [zsh] Already installed: $(zsh --version)"
+        echo "  ✅ [zsh] Already installed: $(zsh --version)"
     else
-        echo "...[zsh] Not found"
+        echo "  ...[zsh] Not found"
         install_package "zsh" zsh || return 0
     fi
 
@@ -251,17 +251,17 @@ section_zsh() {
     ZSH_PATH="$(command -v zsh || true)"
 
     if [[ -n "$ZSH_PATH" ]]; then
-        echo "...[shell] Found at $ZSH_PATH"
+        echo "  ...[shell] Found at $ZSH_PATH"
 
         if [[ -f /etc/shells ]] && ! grep -qx "$ZSH_PATH" /etc/shells && can_root; then
-            echo "...[shell] Adding Zsh to /etc/shells"
+            echo "  ...[shell] Adding Zsh to /etc/shells"
             echo "$ZSH_PATH" | as_root tee -a /etc/shells >/dev/null
         fi
 
         if [[ -n "${container:-}" ]] || grep -qE 'docker|lxc|container' /proc/1/cgroup 2>/dev/null; then
-            echo "🐳 [container] Detected container environment"
-            echo "...[container] Skipping chsh (not appropriate in containers)"
-            echo "...[container] Use container config to set shell if needed"
+            echo "  🐳 [container] Detected container environment"
+            echo "  ...[container] Skipping chsh (not appropriate in containers)"
+            echo "  ...[container] Use container config to set shell if needed"
         else
             local CURRENT_LOGIN_SHELL RESOLVED_CURRENT RESOLVED_ZSH
             CURRENT_LOGIN_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
@@ -269,47 +269,47 @@ section_zsh() {
             RESOLVED_CURRENT="$(readlink -f "$CURRENT_LOGIN_SHELL" 2>/dev/null || echo "$CURRENT_LOGIN_SHELL")"
             RESOLVED_ZSH="$(readlink -f "$ZSH_PATH" 2>/dev/null || echo "$ZSH_PATH")"
 
-            echo "...[shell] Current login shell: $CURRENT_LOGIN_SHELL (resolved: $RESOLVED_CURRENT)"
-            echo "...[shell] Desired shell: $ZSH_PATH (resolved: $RESOLVED_ZSH)"
+            echo "  ...[shell] Current login shell: $CURRENT_LOGIN_SHELL (resolved: $RESOLVED_CURRENT)"
+            echo "  ...[shell] Desired shell: $ZSH_PATH (resolved: $RESOLVED_ZSH)"
 
             if [[ "$RESOLVED_CURRENT" == "$RESOLVED_ZSH" ]]; then
-                echo "✅ [shell] Zsh already set as default"
+                echo "  ✅ [shell] Zsh already set as default"
             elif ! can_root; then
                 # Unprivileged chsh prompts for the account password, so it waits
                 # for --sudo like every other interactive step.
-                echo "⚠️ [shell] Changing the login shell needs root; $ROOT_HINT"
-                echo "👉 [shell] Or run: chsh -s $ZSH_PATH"
+                echo "  ❗ [shell] Changing the login shell needs root; $ROOT_HINT"
+                echo "  👉 [shell] Or run: chsh -s $ZSH_PATH"
             else
-                echo "...[shell] Updating default shell to Zsh"
+                echo "  ...[shell] Updating default shell to Zsh"
 
                 if [[ -f /etc/shells ]]; then
                     if ! grep -qx "$ZSH_PATH" /etc/shells; then
-                        echo "...[shell] Registering zsh in /etc/shells"
+                        echo "  ...[shell] Registering zsh in /etc/shells"
                         echo "$ZSH_PATH" | as_root tee -a /etc/shells >/dev/null
                     fi
                 fi
 
                 if as_root chsh -s "$ZSH_PATH" "$USER"; then
-                    echo "...[shell] Post-change shell: $(getent passwd "$USER" | cut -d: -f7)"
+                    echo "  ...[shell] Post-change shell: $(getent passwd "$USER" | cut -d: -f7)"
                     # chsh only affects new logins. WSL keeps the distro (and any VS Code
                     # server) running with the old $SHELL until it's restarted.
                     if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
-                        echo "👉 [shell] Restart WSL to pick it up: wsl.exe --terminate $WSL_DISTRO_NAME"
+                        echo "  👉 [shell] Restart WSL to pick it up: wsl.exe --terminate $WSL_DISTRO_NAME"
                     else
-                        echo "👉 [shell] Log out and back in to pick it up"
+                        echo "  👉 [shell] Log out and back in to pick it up"
                     fi
                 else
-                    echo "⚠️ [shell] chsh failed"
-                    echo "👉 [shell] Run: chsh -s $ZSH_PATH"
+                    echo "  ❗ [shell] chsh failed"
+                    echo "  👉 [shell] Run: chsh -s $ZSH_PATH"
                 fi
             fi
         fi
     else
-        echo "❌ [shell] Installation failed or binary not found"
+        echo "  ❌ [shell] Installation failed or binary not found"
     fi
 }
 
-section_zsh || echo "⚠️ [zsh] Section encountered an error; continuing with the rest of the install"
+section_zsh || echo "  ❗ [zsh] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # GitHub CLI (gh)
@@ -320,21 +320,21 @@ section_gh() {
     echo "🐙 GitHub CLI (gh)"
 
     install_gh() {
-        echo "...[gh] Attempting installation"
+        echo "  ...[gh] Attempting installation"
 
         if command -v brew >/dev/null 2>&1; then
-            echo "...[gh] Using Homebrew"
+            echo "  ...[gh] Using Homebrew"
             brew install gh
 
         elif ! can_root; then
-            echo "⚠️ [gh] Installing needs root; $ROOT_HINT"
+            echo "  ❗ [gh] Installing needs root; $ROOT_HINT"
             return 1
 
         elif command -v apt-get >/dev/null 2>&1; then
             # gh is absent from (or badly outdated in) default apt repos on many
             # Debian/Ubuntu releases, so wire up the official repo per GitHub's docs:
             # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
-            echo "...[gh] Using apt-get (adding official GitHub CLI repo)"
+            echo "  ...[gh] Using apt-get (adding official GitHub CLI repo)"
             as_root mkdir -p -m 755 /etc/apt/keyrings
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
                 | as_root tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
@@ -349,38 +349,38 @@ section_gh() {
             as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -q gh
 
         elif command -v dnf >/dev/null 2>&1; then
-            echo "...[gh] Using dnf"
+            echo "  ...[gh] Using dnf"
             as_root dnf install -y gh
 
         elif command -v yum >/dev/null 2>&1; then
-            echo "...[gh] Using yum"
+            echo "  ...[gh] Using yum"
             as_root yum install -y gh
 
         elif command -v pacman >/dev/null 2>&1; then
-            echo "...[gh] Using pacman"
+            echo "  ...[gh] Using pacman"
             as_root pacman -S --noconfirm --needed github-cli
 
         else
-            echo "❌ [gh] No supported package manager found"
+            echo "  ❌ [gh] No supported package manager found"
             return 1
         fi
 
-        echo "✅ [gh] Installed"
+        echo "  ✅ [gh] Installed"
     }
 
     if command -v gh >/dev/null 2>&1; then
-        echo "✅ [gh] Already installed: $(gh --version | head -1)"
+        echo "  ✅ [gh] Already installed: $(gh --version | head -1)"
     else
-        echo "...[gh] Not found"
+        echo "  ...[gh] Not found"
         install_gh
     fi
 
     if command -v gh >/dev/null 2>&1; then
         if gh auth status >/dev/null 2>&1; then
-            echo "✅ [gh] Authenticated"
+            echo "  ✅ [gh] Authenticated"
         else
-            echo "⚠️ [gh] Not authenticated"
-            echo "👉 [gh] Run: gh auth login"
+            echo "  ❗ [gh] Not authenticated"
+            echo "  👉 [gh] Run: gh auth login"
             return
         fi
 
@@ -390,15 +390,15 @@ section_gh() {
         # with the real gh, which stores no token in the container, leaving
         # both git and gh without credentials.
         if [[ "${REMOTE_CONTAINERS:-}" == "true" ]]; then
-            echo "⏭️ [gh] Devcontainer detected; keeping VS Code's forwarded git credential helper"
+            echo "  ⏩ [gh] Devcontainer detected; keeping VS Code's forwarded git credential helper"
         else
-            echo "...[gh] Wiring git credential helper via gh auth setup-git"
-            gh auth setup-git || echo "⚠️ [gh] Failed to configure git credential helper"
+            echo "  ...[gh] Wiring git credential helper via gh auth setup-git"
+            gh auth setup-git || echo "  ❗ [gh] Failed to configure git credential helper"
         fi
     fi
 }
 
-section_gh || echo "⚠️ [gh] Section encountered an error; continuing with the rest of the install"
+section_gh || echo "  ❗ [gh] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # ShellCheck
@@ -409,16 +409,16 @@ section_shellcheck() {
     echo "🔍 ShellCheck"
 
     if command -v shellcheck >/dev/null 2>&1; then
-        echo "✅ [shellcheck] Already installed: $(shellcheck --version | sed -n 's/^version: //p')"
+        echo "  ✅ [shellcheck] Already installed: $(shellcheck --version | sed -n 's/^version: //p')"
         return
     fi
 
-    echo "...[shellcheck] Not found"
+    echo "  ...[shellcheck] Not found"
     # Fedora and EPEL package it under its upstream capitalisation
     install_package "shellcheck" shellcheck ShellCheck || return 0
 }
 
-section_shellcheck || echo "⚠️ [shellcheck] Section encountered an error; continuing with the rest of the install"
+section_shellcheck || echo "  ❗ [shellcheck] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # jq (used below to merge JSON configs, and by the Claude Code statusline)
@@ -429,15 +429,15 @@ section_jq() {
     echo "🧰 jq"
 
     if command -v jq >/dev/null 2>&1; then
-        echo "✅ [jq] Already installed: $(jq --version)"
+        echo "  ✅ [jq] Already installed: $(jq --version)"
         return
     fi
 
-    echo "...[jq] Not found"
+    echo "  ...[jq] Not found"
     install_package "jq" jq || return 0
 }
 
-section_jq || echo "⚠️ [jq] Section encountered an error; continuing with the rest of the install"
+section_jq || echo "  ❗ [jq] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Starship
@@ -448,33 +448,33 @@ section_starship() {
     echo "🔧 Starship configuration"
 
     if is_minimal_shell_host; then
-        echo "⏭️ [starship] Skipping on this host (minimal shell profile); unset DOTFILES_MINIMAL_SHELL or edit MINIMAL_SHELL_HOSTS to opt back in"
+        echo "  ⏩ [starship] Skipping on this host (minimal shell profile); unset DOTFILES_MINIMAL_SHELL or edit MINIMAL_SHELL_HOSTS to opt back in"
         return
     fi
 
     if ! command -v starship >/dev/null 2>&1; then
-        echo "...[starship] Not found; attempting installation"
+        echo "  ...[starship] Not found; attempting installation"
         if command -v brew >/dev/null 2>&1; then
-            echo "...[starship] Using Homebrew"
+            echo "  ...[starship] Using Homebrew"
             brew install starship || true
         elif command -v curl >/dev/null 2>&1; then
             # Installing into ~/.local/bin (already on PATH) needs no root. The
             # installer ends with manual steps for every shell, which this
             # section does itself below, so only show its output on failure.
-            echo "...[starship] Using the official installer"
+            echo "  ...[starship] Using the official installer"
             mkdir -p "$HOME/.local/bin"
             local INSTALL_LOG
             if INSTALL_LOG="$(curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin" 2>&1)"; then
-                echo "✅ [starship] Installed to $HOME/.local/bin"
+                echo "  ✅ [starship] Installed to $HOME/.local/bin"
             else
                 echo "$INSTALL_LOG"
-                echo "⚠️ [starship] Official installer failed"
+                echo "  ❗ [starship] Official installer failed"
             fi
         fi
     fi
 
     if ! command -v starship >/dev/null 2>&1; then
-        echo "⚠️ [starship] Not installed"
+        echo "  ❗ [starship] Not installed"
         return
     fi
 
@@ -492,15 +492,15 @@ section_starship() {
     TARGET_STARSHIP_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
 
     if [[ ! -f "$SOURCE_STARSHIP_CONFIG" ]]; then
-        echo "⚠️ [starship] Missing source config: $SOURCE_STARSHIP_CONFIG; skipping"
+        echo "  ❗ [starship] Missing source config: $SOURCE_STARSHIP_CONFIG; skipping"
     else
         mkdir -p "$(dirname "$TARGET_STARSHIP_CONFIG")"
         ln -sf "$SOURCE_STARSHIP_CONFIG" "$TARGET_STARSHIP_CONFIG"
-        echo "✅ [starship] Config linked to $TARGET_STARSHIP_CONFIG"
+        echo "  ✅ [starship] Config linked to $TARGET_STARSHIP_CONFIG"
     fi
 }
 
-section_starship || echo "⚠️ [starship] Section encountered an error; continuing with the rest of the install"
+section_starship || echo "  ❗ [starship] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # OpenCode config
@@ -508,12 +508,12 @@ section_starship || echo "⚠️ [starship] Section encountered an error; contin
 
 section_opencode() {
     echo ""
-    echo "🛠️ OpenCode configuration"
+    echo "🔨 OpenCode configuration"
 
     if ! command -v opencode >/dev/null 2>&1; then
-        echo "⏭️ [opencode] Not installed; skipping"
+        echo "  ⏩ [opencode] Not installed; skipping"
     else
-        echo "...[opencode] Detected"
+        echo "  ...[opencode] Detected"
 
         local SOURCE_CONFIG TARGET_DIR TARGET_CONFIG
         SOURCE_CONFIG="$DOTFILES_DIR/.config/opencode/opencode.json"
@@ -521,10 +521,10 @@ section_opencode() {
         TARGET_CONFIG="$TARGET_DIR/opencode.json"
 
         if [[ ! -f "$SOURCE_CONFIG" ]]; then
-            echo "⚠️ [opencode] Missing source config: $SOURCE_CONFIG"
-            echo "...[opencode] Skipping hydration"
+            echo "  ❗ [opencode] Missing source config: $SOURCE_CONFIG"
+            echo "  ...[opencode] Skipping hydration"
         elif [[ -f "$TARGET_CONFIG" ]]; then
-            echo "✅ [opencode] Config already exists; skipping (delete to re-hydrate)"
+            echo "  ✅ [opencode] Config already exists; skipping (delete to re-hydrate)"
         else
             mkdir -p "$TARGET_DIR"
 
@@ -532,36 +532,36 @@ section_opencode() {
             OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-}"
 
             if [[ -n "$OLLAMA_BASE_URL" ]]; then
-                echo "...[opencode] OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
+                echo "  ...[opencode] OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
 
                 if ! command -v jq >/dev/null 2>&1; then
-                    echo "⚠️ [opencode] jq not installed; cannot apply baseURL override"
-                    echo "...[opencode] Copying default config without URL override"
+                    echo "  ❗ [opencode] jq not installed; cannot apply baseURL override"
+                    echo "  ...[opencode] Copying default config without URL override"
                     cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
                 else
-                    echo "...[opencode] Applying baseURL override with jq"
+                    echo "  ...[opencode] Applying baseURL override with jq"
                     if jq ".provider.ollama.options.baseURL = \"${OLLAMA_BASE_URL}\"" \
                         "$SOURCE_CONFIG" > "$TARGET_CONFIG.tmp" \
                         && mv "$TARGET_CONFIG.tmp" "$TARGET_CONFIG"; then
-                        echo "...[opencode] baseURL override applied"
+                        echo "  ...[opencode] baseURL override applied"
                     else
-                        echo "⚠️ [opencode] jq failed; copying default config"
+                        echo "  ❗ [opencode] jq failed; copying default config"
                         cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
                         rm -f "$TARGET_CONFIG.tmp"
                     fi
                 fi
             else
-                echo "...[opencode] OLLAMA_BASE_URL not set; copying default config"
+                echo "  ...[opencode] OLLAMA_BASE_URL not set; copying default config"
                 cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
             fi
 
             chmod 644 "$TARGET_CONFIG" 2>/dev/null || true
-            echo "✅ [opencode] Config written"
+            echo "  ✅ [opencode] Config written"
         fi
     fi
 }
 
-section_opencode || echo "⚠️ [opencode] Section encountered an error; continuing with the rest of the install"
+section_opencode || echo "  ❗ [opencode] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # VS Code user settings
@@ -569,20 +569,20 @@ section_opencode || echo "⚠️ [opencode] Section encountered an error; contin
 
 section_vscode() {
     echo ""
-    echo "🖥️ VS Code configuration"
+    echo "💻 VS Code configuration"
 
     # Identify if VS Code is installed by checking for the `code` CLI
     if ! command -v code >/dev/null 2>&1; then
-        echo "⏭️ [vscode] Not installed; skipping"
+        echo "  ⏩ [vscode] Not installed; skipping"
     else
-        echo "...[vscode] Detected: $(code --version 2>/dev/null | head -1)"
+        echo "  ...[vscode] Detected: $(code --version 2>/dev/null | head -1)"
 
         local SOURCE_VSCODE_SETTINGS
         SOURCE_VSCODE_SETTINGS="$DOTFILES_DIR/.config/.vscode/user.settings.json"
 
         if [[ ! -f "$SOURCE_VSCODE_SETTINGS" ]]; then
-            echo "⚠️ [vscode] Missing source settings: $SOURCE_VSCODE_SETTINGS"
-            echo "...[vscode] Skipping configuration"
+            echo "  ❗ [vscode] Missing source settings: $SOURCE_VSCODE_SETTINGS"
+            echo "  ...[vscode] Skipping configuration"
         else
             # Resolve the OS-specific path to the VS Code user settings file
             local VSCODE_USER_SETTINGS
@@ -594,39 +594,39 @@ section_vscode() {
                     VSCODE_USER_SETTINGS="$HOME/.config/Code/User/settings.json"
                     ;;
                 *)
-                    echo "⚠️ [vscode] Unsupported OS: $(uname -s); cannot determine settings path"
+                    echo "  ❗ [vscode] Unsupported OS: $(uname -s); cannot determine settings path"
                     VSCODE_USER_SETTINGS=""
                     ;;
             esac
 
             if [[ -z "$VSCODE_USER_SETTINGS" ]]; then
-                echo "...[vscode] Skipping configuration"
+                echo "  ...[vscode] Skipping configuration"
             elif [[ ! -f "$VSCODE_USER_SETTINGS" ]]; then
                 # No existing settings file — copy dotfiles settings directly
-                echo "...[vscode] No existing settings found; copying dotfiles settings"
+                echo "  ...[vscode] No existing settings found; copying dotfiles settings"
                 mkdir -p "$(dirname "$VSCODE_USER_SETTINGS")"
                 cp "$SOURCE_VSCODE_SETTINGS" "$VSCODE_USER_SETTINGS"
-                echo "✅ [vscode] Settings applied"
+                echo "  ✅ [vscode] Settings applied"
             else
-                echo "...[vscode] Existing settings found at: $VSCODE_USER_SETTINGS"
-                echo "...[vscode] Merging dotfiles settings into user settings"
+                echo "  ...[vscode] Existing settings found at: $VSCODE_USER_SETTINGS"
+                echo "  ...[vscode] Merging dotfiles settings into user settings"
 
                 # jq is required to deep-merge the two JSON settings files
                 if ! command -v jq >/dev/null 2>&1; then
-                    echo "⚠️ [vscode] jq not installed; cannot merge settings"
-                    echo "...[vscode] Skipping (install jq and re-run to apply)"
+                    echo "  ❗ [vscode] jq not installed; cannot merge settings"
+                    echo "  ...[vscode] Skipping (install jq and re-run to apply)"
                 else
                     local MERGED
                     MERGED=$(jq -s "$JQ_DEEPMERGE deepmerge(.[0]; .[1])" \
                         "$VSCODE_USER_SETTINGS" "$SOURCE_VSCODE_SETTINGS") || {
-                        echo "⚠️ [vscode] jq merge failed; skipping"
+                        echo "  ❗ [vscode] jq merge failed; skipping"
                         MERGED=""
                     }
 
                     if [[ -n "$MERGED" ]]; then
                         write_atomic "$MERGED" "$VSCODE_USER_SETTINGS" \
-                            "✅ [vscode] Settings merged" \
-                            "⚠️ [vscode] Failed to write merged settings"
+                            "  ✅ [vscode] Settings merged" \
+                            "  ❗ [vscode] Failed to write merged settings"
                     fi
                 fi
             fi
@@ -634,7 +634,7 @@ section_vscode() {
     fi
 }
 
-section_vscode || echo "⚠️ [vscode] Section encountered an error; continuing with the rest of the install"
+section_vscode || echo "  ❗ [vscode] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Ghostty terminal config
@@ -654,22 +654,22 @@ section_ghostty() {
         'set -q XDG_CONFIG_HOME; or set -gx XDG_CONFIG_HOME $HOME/.config'
 
     if [[ ! -f "$SOURCE_GHOSTTY_CONFIG" ]]; then
-        echo "⚠️ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
+        echo "  ❗ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
     else
         local TARGET_GHOSTTY_CONFIG
         TARGET_GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
 
         if [[ -f "$TARGET_GHOSTTY_CONFIG" ]] && [[ -s "$TARGET_GHOSTTY_CONFIG" ]]; then
-            echo "✅ [ghostty] Config already exists and is non-empty; skipping"
+            echo "  ✅ [ghostty] Config already exists and is non-empty; skipping"
         else
             mkdir -p "$(dirname "$TARGET_GHOSTTY_CONFIG")"
             ln -sf "$SOURCE_GHOSTTY_CONFIG" "$TARGET_GHOSTTY_CONFIG"
-            echo "✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
+            echo "  ✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
         fi
     fi
 }
 
-section_ghostty || echo "⚠️ [ghostty] Section encountered an error; continuing with the rest of the install"
+section_ghostty || echo "  ❗ [ghostty] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Global Git attributes
@@ -684,17 +684,17 @@ section_git_attrs() {
     TARGET_GIT_ATTRS="$HOME/.config/git/attributes"
 
     if [[ ! -f "$SOURCE_GIT_ATTRS" ]]; then
-        echo "⚠️ [git] Missing source: $SOURCE_GIT_ATTRS; skipping"
+        echo "  ❗ [git] Missing source: $SOURCE_GIT_ATTRS; skipping"
     else
         mkdir -p "$(dirname "$TARGET_GIT_ATTRS")"
         # Symlink so future updates propagate automatically. ~/.config/git/attributes
         # is Git's default global attributes path (no `git config` needed).
         ln -sf "$SOURCE_GIT_ATTRS" "$TARGET_GIT_ATTRS"
-        echo "✅ [git] Linked $TARGET_GIT_ATTRS"
+        echo "  ✅ [git] Linked $TARGET_GIT_ATTRS"
     fi
 }
 
-section_git_attrs || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
+section_git_attrs || echo "  ❗ [git] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Git identity
@@ -702,10 +702,10 @@ section_git_attrs || echo "⚠️ [git] Section encountered an error; continuing
 
 section_git_identity() {
     echo ""
-    echo "🪪 Git identity"
+    echo "👤 Git identity"
 
     if ! command -v git >/dev/null 2>&1; then
-        echo "⏭️ [git] Not installed; skipping"
+        echo "  ⏩ [git] Not installed; skipping"
         return
     fi
 
@@ -714,19 +714,19 @@ section_git_identity() {
     for key in user.name user.email; do
         value="$(git config --get "$key" || true)"
         if [[ -n "$value" ]]; then
-            echo "✅ [git] $key: $value"
+            echo "  ✅ [git] $key: $value"
         else
-            echo "⚠️ [git] $key not set; commits will fail until it is"
+            echo "  ❗ [git] $key not set; commits will fail until it is"
             missing=1
         fi
     done
 
     if [[ "$missing" == 1 ]]; then
-        echo "👉 [git] Run: git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\""
+        echo "  👉 [git] Run: git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\""
     fi
 }
 
-section_git_identity || echo "⚠️ [git] Section encountered an error; continuing with the rest of the install"
+section_git_identity || echo "  ❗ [git] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Claude Code install
@@ -737,27 +737,27 @@ section_claude_install() {
     echo "🤖 Claude Code install"
 
     if command -v claude >/dev/null 2>&1; then
-        echo "✅ [claude] Already installed: $(claude --version)"
+        echo "  ✅ [claude] Already installed: $(claude --version)"
         return
     fi
     if ! command -v curl >/dev/null 2>&1; then
-        echo "⚠️ [claude] curl not installed; skipping"
+        echo "  ❗ [claude] curl not installed; skipping"
         return
     fi
 
-    echo "...[claude] Not found; running the native installer"
+    echo "  ...[claude] Not found; running the native installer"
     curl -fsSL https://claude.ai/install.sh | bash
 
     # The installer puts claude in ~/.local/bin, which section_local_bin has
     # already added to PATH for this script and every installed shell.
     if command -v claude >/dev/null 2>&1; then
-        echo "✅ [claude] Installed: $(claude --version)"
+        echo "  ✅ [claude] Installed: $(claude --version)"
     else
-        echo "⚠️ [claude] Installer finished but claude isn't on PATH"
+        echo "  ❗ [claude] Installer finished but claude isn't on PATH"
     fi
 }
 
-section_claude_install || echo "⚠️ [claude] Section encountered an error; continuing with the rest of the install"
+section_claude_install || echo "  ❗ [claude] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Claude Code auto-update in devcontainers
@@ -773,11 +773,11 @@ section_claude_update() {
     # fails with "no write permission to npm prefix". Hand the package to the
     # remote user; the feature's cached image layer is left alone.
     if [[ "${REMOTE_CONTAINERS:-}" != "true" && "${CODESPACES:-}" != "true" ]]; then
-        echo "⏭️ [claude] Not a devcontainer; skipping"
+        echo "  ⏩ [claude] Not a devcontainer; skipping"
         return
     fi
     if ! command -v npm >/dev/null 2>&1; then
-        echo "⏭️ [claude] npm not installed; skipping"
+        echo "  ⏩ [claude] npm not installed; skipping"
         return
     fi
 
@@ -785,18 +785,18 @@ section_claude_update() {
     PACKAGE_DIR="$(npm root -g)/@anthropic-ai"
 
     if [[ ! -d "$PACKAGE_DIR" ]]; then
-        echo "⏭️ [claude] Not installed through npm; skipping"
+        echo "  ⏩ [claude] Not installed through npm; skipping"
     elif [[ -z "$(find "$PACKAGE_DIR" ! -user "$(id -u)" -print -quit)" ]]; then
-        echo "✅ [claude] $PACKAGE_DIR already belongs to $(id -un)"
+        echo "  ✅ [claude] $PACKAGE_DIR already belongs to $(id -un)"
     elif ! can_root; then
-        echo "⚠️ [claude] $PACKAGE_DIR isn't yours, so auto-update will fail; $ROOT_HINT"
+        echo "  ❗ [claude] $PACKAGE_DIR isn't yours, so auto-update will fail; $ROOT_HINT"
     else
         as_root chown -R "$(id -u):$(id -g)" "$PACKAGE_DIR"
-        echo "✅ [claude] Gave $PACKAGE_DIR to $(id -un), so Claude Code can update itself"
+        echo "  ✅ [claude] Gave $PACKAGE_DIR to $(id -un), so Claude Code can update itself"
     fi
 }
 
-section_claude_update || echo "⚠️ [claude] Section encountered an error; continuing with the rest of the install"
+section_claude_update || echo "  ❗ [claude] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Global Claude Code settings
@@ -812,12 +812,12 @@ section_claude_settings() {
     TARGET_CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 
     if [[ ! -f "$SOURCE_CLAUDE_MD" ]]; then
-        echo "⚠️ [claude] Missing source: $SOURCE_CLAUDE_MD; skipping CLAUDE.md"
+        echo "  ❗ [claude] Missing source: $SOURCE_CLAUDE_MD; skipping CLAUDE.md"
     else
         mkdir -p "$(dirname "$TARGET_CLAUDE_MD")"
         # Symlink — dotfiles fully owns this personal-prefs file.
         ln -sf "$SOURCE_CLAUDE_MD" "$TARGET_CLAUDE_MD"
-        echo "✅ [claude] Linked $TARGET_CLAUDE_MD"
+        echo "  ✅ [claude] Linked $TARGET_CLAUDE_MD"
     fi
 
     # --- Statusline script (wired up by settings.json below) ---
@@ -826,24 +826,24 @@ section_claude_settings() {
     TARGET_STATUSLINE="$HOME/.claude/statusline-command.sh"
 
     if [[ ! -f "$SOURCE_STATUSLINE" ]]; then
-        echo "⚠️ [claude] Missing source: $SOURCE_STATUSLINE; skipping statusline"
+        echo "  ❗ [claude] Missing source: $SOURCE_STATUSLINE; skipping statusline"
     else
         mkdir -p "$(dirname "$TARGET_STATUSLINE")"
         # Symlink — dotfiles fully owns this script, as with CLAUDE.md above.
         ln -sf "$SOURCE_STATUSLINE" "$TARGET_STATUSLINE"
-        echo "✅ [claude] Linked $TARGET_STATUSLINE"
+        echo "  ✅ [claude] Linked $TARGET_STATUSLINE"
 
         # The gate that long tasks run before starting a unit of work; it reads the
         # rate-limit cache the statusline writes on every refresh.
         if [[ -f "$DOTFILES_DIR/.config/claude/usage-gate.sh" ]]; then
             ln -sf "$DOTFILES_DIR/.config/claude/usage-gate.sh" "$HOME/.claude/usage-gate.sh"
-            echo "✅ [claude] Linked $HOME/.claude/usage-gate.sh"
+            echo "  ✅ [claude] Linked $HOME/.claude/usage-gate.sh"
         fi
 
         # The statusline renders nothing at all without jq; warn rather than let
         # it fail silently on every refresh.
         if ! command -v jq >/dev/null 2>&1; then
-            echo "⚠️ [claude] jq not installed; the statusline will stay blank until it is"
+            echo "  ❗ [claude] jq not installed; the statusline will stay blank until it is"
         fi
     fi
 
@@ -853,33 +853,33 @@ section_claude_settings() {
     TARGET_CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 
     if [[ ! -f "$SOURCE_CLAUDE_SETTINGS" ]]; then
-        echo "⚠️ [claude] Missing source: $SOURCE_CLAUDE_SETTINGS; skipping"
+        echo "  ❗ [claude] Missing source: $SOURCE_CLAUDE_SETTINGS; skipping"
     elif [[ ! -f "$TARGET_CLAUDE_SETTINGS" ]]; then
-        echo "...[claude] No existing settings; copying dotfiles settings"
+        echo "  ...[claude] No existing settings; copying dotfiles settings"
         mkdir -p "$(dirname "$TARGET_CLAUDE_SETTINGS")"
         cp "$SOURCE_CLAUDE_SETTINGS" "$TARGET_CLAUDE_SETTINGS"
-        echo "✅ [claude] Settings applied"
+        echo "  ✅ [claude] Settings applied"
     elif ! command -v jq >/dev/null 2>&1; then
-        echo "⚠️ [claude] jq not installed; cannot merge into existing settings"
-        echo "...[claude] Skipping (install jq and re-run to apply)"
+        echo "  ❗ [claude] jq not installed; cannot merge into existing settings"
+        echo "  ...[claude] Skipping (install jq and re-run to apply)"
     else
-        echo "...[claude] Existing settings found; merging allowlist"
+        echo "  ...[claude] Existing settings found; merging allowlist"
         local MERGED
         MERGED=$(jq -s "$JQ_DEEPMERGE deepmerge(.[0]; .[1])" \
             "$TARGET_CLAUDE_SETTINGS" "$SOURCE_CLAUDE_SETTINGS") || {
-            echo "⚠️ [claude] jq merge failed; skipping"
+            echo "  ❗ [claude] jq merge failed; skipping"
             MERGED=""
         }
 
         if [[ -n "$MERGED" ]]; then
             write_atomic "$MERGED" "$TARGET_CLAUDE_SETTINGS" \
-                "✅ [claude] Settings merged" \
-                "⚠️ [claude] Failed to write merged settings"
+                "  ✅ [claude] Settings merged" \
+                "  ❗ [claude] Failed to write merged settings"
         fi
     fi
 }
 
-section_claude_settings || echo "⚠️ [claude] Section encountered an error; continuing with the rest of the install"
+section_claude_settings || echo "  ❗ [claude] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Claude Code personal skills
@@ -894,7 +894,7 @@ section_claude_skills() {
     TARGET_SKILLS_DIR="$HOME/.claude/skills"
 
     if [[ ! -d "$SOURCE_SKILLS_DIR" ]]; then
-        echo "⚠️ [skills] Missing source dir: $SOURCE_SKILLS_DIR; skipping"
+        echo "  ❗ [skills] Missing source dir: $SOURCE_SKILLS_DIR; skipping"
     else
         mkdir -p "$TARGET_SKILLS_DIR"
 
@@ -907,19 +907,19 @@ section_claude_skills() {
             target="$TARGET_SKILLS_DIR/$skill_name"
 
             if [[ -d "$target" && ! -L "$target" ]]; then
-                echo "⚠️ [skills] $skill_name already exists and isn't a symlink; skipping"
+                echo "  ❗ [skills] $skill_name already exists and isn't a symlink; skipping"
                 continue
             fi
 
             # -n treats an existing symlink as the file to replace rather than
             # dereferencing it and dropping the new link inside the target dir.
             ln -sfn "${skill_dir%/}" "$target"
-            echo "✅ [skills] Linked $skill_name"
+            echo "  ✅ [skills] Linked $skill_name"
         done
     fi
 }
 
-section_claude_skills || echo "⚠️ [skills] Section encountered an error; continuing with the rest of the install"
+section_claude_skills || echo "  ❗ [skills] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Language LSP plugins
@@ -945,7 +945,7 @@ section_lsp() {
             done
         fi
         root="${root:-$(pwd)}"
-        echo "...[lsp] Project root: $root" >&2
+        echo "  ...[lsp] Project root: $root" >&2
         echo "$root"
     }
 
@@ -954,7 +954,7 @@ section_lsp() {
         root="$(find_project_root)"
 
         if [[ -f "$root/.mise.toml" ]]; then
-            echo "...[lsp] Deriving languages from .mise.toml" >&2
+            echo "  ...[lsp] Deriving languages from .mise.toml" >&2
             grep -qE '^\s*python\s*=' "$root/.mise.toml" && echo python
             grep -qE '^\s*node\s*=' "$root/.mise.toml" && echo node
             grep -qE '^\s*rust\s*=' "$root/.mise.toml" && echo rust
@@ -963,7 +963,7 @@ section_lsp() {
         fi
 
         if [[ -f "$root/.tool-versions" ]]; then
-            echo "...[lsp] Deriving languages from .tool-versions" >&2
+            echo "  ...[lsp] Deriving languages from .tool-versions" >&2
             grep -qE '^python' "$root/.tool-versions" && echo python
             grep -qE '^node(js)?' "$root/.tool-versions" && echo node
             grep -qE '^rust' "$root/.tool-versions" && echo rust
@@ -971,7 +971,7 @@ section_lsp() {
             return
         fi
 
-        echo "...[lsp] No toolchain manifest; using language-file fallbacks" >&2
+        echo "  ...[lsp] No toolchain manifest; using language-file fallbacks" >&2
         if [[ -f "$root/pyproject.toml" ]] || [[ -f "$root/requirements.txt" ]] || [[ -f "$root/setup.py" ]]; then
             echo python
         fi
@@ -1006,11 +1006,11 @@ section_lsp() {
         command -v claude >/dev/null 2>&1 || return 0
 
         plugin="${CLAUDE_PLUGINS[$lang]}"
-        echo "...[lsp] Installing Claude plugin for $lang: $plugin"
+        echo "  ...[lsp] Installing Claude plugin for $lang: $plugin"
         # claude prints its own success line; only surface failures ourselves.
         # Name the marketplace: unqualified names can resolve to the plugin directory instead,
         # installing a second copy beside the one settings.json enables.
-        claude plugins install "$plugin@claude-plugins-official" || echo "⚠️ [lsp] claude: failed to install $plugin"
+        claude plugins install "$plugin@claude-plugins-official" || echo "  ❗ [lsp] claude: failed to install $plugin"
     }
 
     configure_opencode_lsp() {
@@ -1020,12 +1020,12 @@ section_lsp() {
         command -v opencode >/dev/null 2>&1 || return 0
 
         if [[ ! -f "$target" ]]; then
-            echo "...[lsp] opencode: config not found; skipping LSP merge"
+            echo "  ...[lsp] opencode: config not found; skipping LSP merge"
             return 0
         fi
 
         if ! command -v jq >/dev/null 2>&1; then
-            echo "⚠️ [lsp] opencode: jq not installed; cannot merge LSP config"
+            echo "  ❗ [lsp] opencode: jq not installed; cannot merge LSP config"
             return 0
         fi
 
@@ -1038,25 +1038,25 @@ section_lsp() {
 
         [[ "$patch" == "{}" ]] && return 0
 
-        echo "...[lsp] opencode: merging LSP entries: $(printf '%s' "$patch" | jq -r '[keys[]] | join(", ")')"
+        echo "  ...[lsp] opencode: merging LSP entries: $(printf '%s' "$patch" | jq -r '[keys[]] | join(", ")')"
 
         merged=$(jq --argjson lsp "$patch" '.lsp = ((.lsp // {}) + $lsp)' "$target") || {
-            echo "⚠️ [lsp] opencode: jq merge failed"
+            echo "  ❗ [lsp] opencode: jq merge failed"
             return 1
         }
 
         write_atomic "$merged" "$target" \
-            "✅ [lsp] opencode: LSP config merged" \
-            "⚠️ [lsp] opencode: failed to write merged config"
+            "  ✅ [lsp] opencode: LSP config merged" \
+            "  ❗ [lsp] opencode: failed to write merged config"
     }
 
     local -a DETECTED_LANGS
     mapfile -t DETECTED_LANGS < <(detect_languages)
 
     if [[ ${#DETECTED_LANGS[@]} -eq 0 ]]; then
-        echo "...[lsp] No languages detected; skipping"
+        echo "  ...[lsp] No languages detected; skipping"
     else
-        echo "...[lsp] Detected: ${DETECTED_LANGS[*]}"
+        echo "  ...[lsp] Detected: ${DETECTED_LANGS[*]}"
 
         local lang
         for lang in "${DETECTED_LANGS[@]}"; do
@@ -1067,7 +1067,7 @@ section_lsp() {
     fi
 }
 
-section_lsp || echo "⚠️ [lsp] Section encountered an error; continuing with the rest of the install"
+section_lsp || echo "  ❗ [lsp] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Finish
