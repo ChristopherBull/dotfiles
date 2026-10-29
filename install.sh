@@ -82,6 +82,37 @@ configure_for_installed_shells() {
     fi
 }
 
+# Installs a package with the first supported package manager found. Pass a
+# third argument when dnf/yum name it differently.
+install_package() {
+    local label="$1" pkg="$2" rpm_pkg="${3:-$2}"
+
+    echo "...[$label] Attempting installation"
+
+    if command -v brew >/dev/null 2>&1; then
+        echo "...[$label] Using Homebrew"
+        brew install "$pkg" || return 1
+    elif command -v apt-get >/dev/null 2>&1; then
+        echo "...[$label] Using apt-get"
+        sudo apt-get update || return 1
+        sudo apt-get install -y "$pkg" || return 1
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "...[$label] Using dnf"
+        sudo dnf install -y "$rpm_pkg" || return 1
+    elif command -v yum >/dev/null 2>&1; then
+        echo "...[$label] Using yum"
+        sudo yum install -y "$rpm_pkg" || return 1
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "...[$label] Using pacman"
+        sudo pacman -S --noconfirm "$pkg" || return 1
+    else
+        echo "❌ [$label] No supported package manager found"
+        return 1
+    fi
+
+    echo "✅ [$label] Installed"
+}
+
 # Merges objects recursively (dotfiles wins on conflict) and unions arrays.
 # shellcheck disable=SC2016
 JQ_DEEPMERGE='
@@ -156,43 +187,11 @@ section_zsh() {
         return
     fi
 
-    install_zsh() {
-        echo "...[zsh] Attempting installation"
-
-        if command -v brew >/dev/null 2>&1; then
-            echo "...[zsh] Using Homebrew"
-            brew install zsh
-
-        elif command -v apt-get >/dev/null 2>&1; then
-            echo "...[zsh] Using apt-get"
-            sudo apt-get update
-            sudo apt-get install -y zsh
-
-        elif command -v dnf >/dev/null 2>&1; then
-            echo "...[zsh] Using dnf"
-            sudo dnf install -y zsh
-
-        elif command -v yum >/dev/null 2>&1; then
-            echo "...[zsh] Using yum"
-            sudo yum install -y zsh
-
-        elif command -v pacman >/dev/null 2>&1; then
-            echo "...[zsh] Using pacman"
-            sudo pacman -S --noconfirm zsh
-
-        else
-            echo "❌ [zsh] No supported package manager found"
-            return 1
-        fi
-
-        echo "✅ [zsh] Installed"
-    }
-
     if command -v zsh >/dev/null 2>&1; then
         echo "✅ [zsh] Already installed: $(zsh --version)"
     else
         echo "...[zsh] Not found"
-        install_zsh
+        install_package "zsh" zsh || return 0
     fi
 
     echo ""
@@ -357,36 +356,9 @@ section_shellcheck() {
         return
     fi
 
-    echo "...[shellcheck] Not found; attempting installation"
-
-    if command -v brew >/dev/null 2>&1; then
-        echo "...[shellcheck] Using Homebrew"
-        brew install shellcheck
-
-    elif command -v apt-get >/dev/null 2>&1; then
-        echo "...[shellcheck] Using apt-get"
-        sudo apt-get update
-        sudo apt-get install -y shellcheck
-
+    echo "...[shellcheck] Not found"
     # Fedora and EPEL package it under its upstream capitalisation
-    elif command -v dnf >/dev/null 2>&1; then
-        echo "...[shellcheck] Using dnf"
-        sudo dnf install -y ShellCheck
-
-    elif command -v yum >/dev/null 2>&1; then
-        echo "...[shellcheck] Using yum"
-        sudo yum install -y ShellCheck
-
-    elif command -v pacman >/dev/null 2>&1; then
-        echo "...[shellcheck] Using pacman"
-        sudo pacman -S --noconfirm shellcheck
-
-    else
-        echo "❌ [shellcheck] No supported package manager found"
-        return 1
-    fi
-
-    echo "✅ [shellcheck] Installed"
+    install_package "shellcheck" shellcheck ShellCheck || return 0
 }
 
 section_shellcheck || echo "⚠️ [shellcheck] Section encountered an error; continuing with the rest of the install"
