@@ -300,6 +300,53 @@ section_gh() {
 section_gh || echo "⚠️ [gh] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# ShellCheck
+# -----------------------------------------------------------------------------
+
+section_shellcheck() {
+    echo ""
+    echo "🔍 ShellCheck"
+
+    if command -v shellcheck >/dev/null 2>&1; then
+        echo "✅ [shellcheck] Already installed: $(shellcheck --version | sed -n 's/^version: //p')"
+        return
+    fi
+
+    echo "...[shellcheck] Not found; attempting installation"
+
+    if command -v brew >/dev/null 2>&1; then
+        echo "...[shellcheck] Using Homebrew"
+        brew install shellcheck
+
+    elif command -v apt-get >/dev/null 2>&1; then
+        echo "...[shellcheck] Using apt-get"
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+
+    # Fedora and EPEL package it under its upstream capitalisation
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "...[shellcheck] Using dnf"
+        sudo dnf install -y ShellCheck
+
+    elif command -v yum >/dev/null 2>&1; then
+        echo "...[shellcheck] Using yum"
+        sudo yum install -y ShellCheck
+
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "...[shellcheck] Using pacman"
+        sudo pacman -S --noconfirm shellcheck
+
+    else
+        echo "❌ [shellcheck] No supported package manager found"
+        return 1
+    fi
+
+    echo "✅ [shellcheck] Installed"
+}
+
+section_shellcheck || echo "⚠️ [shellcheck] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Starship
 # -----------------------------------------------------------------------------
 
