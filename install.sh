@@ -421,6 +421,25 @@ section_shellcheck() {
 section_shellcheck || echo "⚠️ [shellcheck] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# jq (used below to merge JSON configs, and by the Claude Code statusline)
+# -----------------------------------------------------------------------------
+
+section_jq() {
+    echo ""
+    echo "🧰 jq"
+
+    if command -v jq >/dev/null 2>&1; then
+        echo "✅ [jq] Already installed: $(jq --version)"
+        return
+    fi
+
+    echo "...[jq] Not found"
+    install_package "jq" jq || return 0
+}
+
+section_jq || echo "⚠️ [jq] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # Starship
 # -----------------------------------------------------------------------------
 
