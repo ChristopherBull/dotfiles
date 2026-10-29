@@ -28,6 +28,33 @@ is_minimal_shell_host() {
 }
 
 # -----------------------------------------------------------------------------
+# Arguments
+# -----------------------------------------------------------------------------
+
+usage() {
+    cat <<'EOF'
+Usage: install.sh [--sudo]
+
+Runs non-interactively by default: steps that need root only run as root or
+through sudo that needs no password (e.g. Dev Containers), and are otherwise
+skipped with a hint.
+
+  --sudo      Allow sudo to prompt for a password (same as DOTFILES_SUDO=1)
+  -h, --help  Show this help
+EOF
+}
+
+ALLOW_SUDO_PROMPT="${DOTFILES_SUDO:-0}"
+
+for arg in "$@"; do
+    case "$arg" in
+        --sudo) ALLOW_SUDO_PROMPT=1 ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
+    esac
+done
+
+# -----------------------------------------------------------------------------
 # Start
 # -----------------------------------------------------------------------------
 
@@ -82,6 +109,26 @@ configure_for_installed_shells() {
     fi
 }
 
+ROOT_HINT="re-run with --sudo to allow a sudo password prompt"
+
+# True when root steps can run without breaking the non-interactive default.
+can_root() {
+    [[ "$EUID" -eq 0 ]] && return 0
+    command -v sudo >/dev/null 2>&1 || return 1
+    [[ "$ALLOW_SUDO_PROMPT" == "1" ]] || sudo -n true 2>/dev/null
+}
+
+# Runs a command as root; sudo may only prompt when --sudo was passed.
+as_root() {
+    if [[ "$EUID" -eq 0 ]]; then
+        "$@"
+    elif [[ "$ALLOW_SUDO_PROMPT" == "1" ]]; then
+        sudo "$@"
+    else
+        sudo -n "$@"
+    fi
+}
+
 # Installs a package with the first supported package manager found. Pass a
 # third argument when dnf/yum name it differently.
 install_package() {
@@ -92,19 +139,22 @@ install_package() {
     if command -v brew >/dev/null 2>&1; then
         echo "...[$label] Using Homebrew"
         brew install "$pkg" || return 1
+    elif ! can_root; then
+        echo "⚠️ [$label] Installing needs root; $ROOT_HINT"
+        return 1
     elif command -v apt-get >/dev/null 2>&1; then
         echo "...[$label] Using apt-get"
-        sudo apt-get update || return 1
-        sudo apt-get install -y "$pkg" || return 1
+        as_root apt-get update -q || return 1
+        as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -q "$pkg" || return 1
     elif command -v dnf >/dev/null 2>&1; then
         echo "...[$label] Using dnf"
-        sudo dnf install -y "$rpm_pkg" || return 1
+        as_root dnf install -y "$rpm_pkg" || return 1
     elif command -v yum >/dev/null 2>&1; then
         echo "...[$label] Using yum"
-        sudo yum install -y "$rpm_pkg" || return 1
+        as_root yum install -y "$rpm_pkg" || return 1
     elif command -v pacman >/dev/null 2>&1; then
         echo "...[$label] Using pacman"
-        sudo pacman -S --noconfirm "$pkg" || return 1
+        as_root pacman -S --noconfirm --needed "$pkg" || return 1
     else
         echo "❌ [$label] No supported package manager found"
         return 1
@@ -203,11 +253,9 @@ section_zsh() {
     if [[ -n "$ZSH_PATH" ]]; then
         echo "...[shell] Found at $ZSH_PATH"
 
-        if [[ -f /etc/shells ]]; then
-            if ! grep -qx "$ZSH_PATH" /etc/shells; then
-                echo "...[shell] Adding Zsh to /etc/shells"
-                echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
-            fi
+        if [[ -f /etc/shells ]] && ! grep -qx "$ZSH_PATH" /etc/shells && can_root; then
+            echo "...[shell] Adding Zsh to /etc/shells"
+            echo "$ZSH_PATH" | as_root tee -a /etc/shells >/dev/null
         fi
 
         if [[ -n "${container:-}" ]] || grep -qE 'docker|lxc|container' /proc/1/cgroup 2>/dev/null; then
@@ -226,17 +274,22 @@ section_zsh() {
 
             if [[ "$RESOLVED_CURRENT" == "$RESOLVED_ZSH" ]]; then
                 echo "✅ [shell] Zsh already set as default"
+            elif ! can_root; then
+                # Unprivileged chsh prompts for the account password, so it waits
+                # for --sudo like every other interactive step.
+                echo "⚠️ [shell] Changing the login shell needs root; $ROOT_HINT"
+                echo "👉 [shell] Or run: chsh -s $ZSH_PATH"
             else
                 echo "...[shell] Updating default shell to Zsh"
 
                 if [[ -f /etc/shells ]]; then
                     if ! grep -qx "$ZSH_PATH" /etc/shells; then
                         echo "...[shell] Registering zsh in /etc/shells"
-                        echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+                        echo "$ZSH_PATH" | as_root tee -a /etc/shells >/dev/null
                     fi
                 fi
 
-                if chsh -s "$ZSH_PATH" "$USER"; then
+                if as_root chsh -s "$ZSH_PATH" "$USER"; then
                     echo "...[shell] Post-change shell: $(getent passwd "$USER" | cut -d: -f7)"
                     # chsh only affects new logins. WSL keeps the distro (and any VS Code
                     # server) running with the old $SHELL until it's restarted.
@@ -273,35 +326,39 @@ section_gh() {
             echo "...[gh] Using Homebrew"
             brew install gh
 
+        elif ! can_root; then
+            echo "⚠️ [gh] Installing needs root; $ROOT_HINT"
+            return 1
+
         elif command -v apt-get >/dev/null 2>&1; then
             # gh is absent from (or badly outdated in) default apt repos on many
             # Debian/Ubuntu releases, so wire up the official repo per GitHub's docs:
             # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
             echo "...[gh] Using apt-get (adding official GitHub CLI repo)"
-            sudo mkdir -p -m 755 /etc/apt/keyrings
+            as_root mkdir -p -m 755 /etc/apt/keyrings
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-                | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
-            sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
-            sudo mkdir -p -m 755 /etc/apt/sources.list.d
+                | as_root tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+            as_root chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+            as_root mkdir -p -m 755 /etc/apt/sources.list.d
             # This is a flat repo (no release codename in the path) — a prior
             # version of this script pointed at .../packages/stable/deb/<codename>,
             # which doesn't exist and 404s.
             echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-                | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
-            sudo apt-get update
-            sudo apt-get install -y gh
+                | as_root tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+            as_root apt-get update -q
+            as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -q gh
 
         elif command -v dnf >/dev/null 2>&1; then
             echo "...[gh] Using dnf"
-            sudo dnf install -y gh
+            as_root dnf install -y gh
 
         elif command -v yum >/dev/null 2>&1; then
             echo "...[gh] Using yum"
-            sudo yum install -y gh
+            as_root yum install -y gh
 
         elif command -v pacman >/dev/null 2>&1; then
             echo "...[gh] Using pacman"
-            sudo pacman -S --noconfirm github-cli
+            as_root pacman -S --noconfirm --needed github-cli
 
         else
             echo "❌ [gh] No supported package manager found"
@@ -691,10 +748,10 @@ section_claude_update() {
         echo "⏭️ [claude] Not installed through npm; skipping"
     elif [[ -z "$(find "$PACKAGE_DIR" ! -user "$(id -u)" -print -quit)" ]]; then
         echo "✅ [claude] $PACKAGE_DIR already belongs to $(id -un)"
-    elif ! sudo -n true 2>/dev/null; then
-        echo "⚠️ [claude] $PACKAGE_DIR isn't yours and sudo needs a password; auto-update will fail"
+    elif ! can_root; then
+        echo "⚠️ [claude] $PACKAGE_DIR isn't yours, so auto-update will fail; $ROOT_HINT"
     else
-        sudo chown -R "$(id -u):$(id -g)" "$PACKAGE_DIR"
+        as_root chown -R "$(id -u):$(id -g)" "$PACKAGE_DIR"
         echo "✅ [claude] Gave $PACKAGE_DIR to $(id -un), so Claude Code can update itself"
     fi
 }

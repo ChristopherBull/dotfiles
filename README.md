@@ -45,6 +45,16 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     > Each section (zsh, `gh`, Starship, VS Code, etc.) fails independently — an
     > error in one won't stop the rest from installing.
 
+    It runs non-interactively by default. Steps that need root (installing
+    packages, changing the login shell) only run as root or through
+    passwordless sudo, as in Dev Containers; otherwise they are skipped with a
+    hint. Pass `--sudo` (or set `DOTFILES_SUDO=1`) to let sudo prompt for a
+    password:
+
+    ```bash
+    ./install.sh --sudo
+    ```
+
 ## VS Code User Settings
 
 This repository includes a sample VS Code user settings file at [`.config/.vscode/user.settings.json`](/.config/.vscode/user.settings.json). This file is **not** automatically installed, but provides a set of recommended settings that complement the dotfiles and can impact your development environment. These settings are not guaranteed to sync across all VS Code instances, so you may need to manually copy them into your own `settings.json` if you want them applied.
@@ -119,6 +129,7 @@ propagate. Per-repo `.gitattributes` still wins.
   npm prefix". In a Dev Container or Codespace, `install.sh` gives the package
   (`$(npm root -g)/@anthropic-ai`) to the remote user with `sudo chown`, so
   Claude Code can update itself while the feature's image layer stays cached.
+  This needs passwordless sudo, or `--sudo`.
 
 > [!NOTE]
 > A global allowlist applies to **every** repo you open, including unfamiliar
