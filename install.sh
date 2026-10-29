@@ -453,6 +453,27 @@ section_starship() {
     fi
 
     if ! command -v starship >/dev/null 2>&1; then
+        echo "...[starship] Not found; attempting installation"
+        if command -v brew >/dev/null 2>&1; then
+            echo "...[starship] Using Homebrew"
+            brew install starship || true
+        elif command -v curl >/dev/null 2>&1; then
+            # Installing into ~/.local/bin (already on PATH) needs no root. The
+            # installer ends with manual steps for every shell, which this
+            # section does itself below, so only show its output on failure.
+            echo "...[starship] Using the official installer"
+            mkdir -p "$HOME/.local/bin"
+            local INSTALL_LOG
+            if INSTALL_LOG="$(curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin" 2>&1)"; then
+                echo "✅ [starship] Installed to $HOME/.local/bin"
+            else
+                echo "$INSTALL_LOG"
+                echo "⚠️ [starship] Official installer failed"
+            fi
+        fi
+    fi
+
+    if ! command -v starship >/dev/null 2>&1; then
         echo "⚠️ [starship] Not installed"
         return
     fi

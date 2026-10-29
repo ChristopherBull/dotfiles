@@ -55,6 +55,10 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     ./install.sh --sudo
     ```
 
+    It installs any missing zsh, `gh`, ShellCheck, `jq`, Starship and Claude
+    Code. Starship and Claude Code go into `~/.local/bin`, so they never need
+    root.
+
 ## VS Code User Settings
 
 This repository includes a sample VS Code user settings file at [`.config/.vscode/user.settings.json`](/.config/.vscode/user.settings.json). This file is **not** automatically installed, but provides a set of recommended settings that complement the dotfiles and can impact your development environment. These settings are not guaranteed to sync across all VS Code instances, so you may need to manually copy them into your own `settings.json` if you want them applied.
