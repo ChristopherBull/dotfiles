@@ -20,13 +20,9 @@ gh pr view --json number,url 2>/dev/null || gh pr create --fill
 
 `--fill` pulls the title/body from the branch's commits. If the commit history is messy, write a clean title and short body yourself instead of relying on it.
 
-## Step 2 — Wait for CI using the `Monitor` tool
+## Step 2 — Wait for CI in the background
 
-Never block the session on `gh pr checks --watch`, and never chain a `sleep` in front of a status check — foreground sleeps are blocked and the call gets rejected. Use `Monitor`, which runs a command in the background and feeds each line of its output back as an event, so the session stays usable while CI runs.
-
-Don't put `--watch` inside the monitor either. Blocking isn't the objection there, since the monitor backgrounds it anyway — the objection is output shape. `--watch` reprints the whole check table every refresh, and the monitor turns each of those lines into an event. A ten-check pipeline running twenty minutes is hundreds of events all saying nothing has changed. The loop below prints one line, once.
-
-Give it a script that stays quiet while checks are pending and prints once, when they settle. `gh pr checks` exits 8 while anything is still running, 0 when all pass, 1 when something failed, so the exit code is the whole state machine:
+Never block the session on `gh pr checks --watch`, and never chain a `sleep` in front of a status check — foreground sleeps are blocked and the call gets rejected. Run the loop below as a Bash call with `run_in_background: true`: it exits once checks settle, so you get a single completion notification and the session stays usable meanwhile. `gh pr checks` exits 8 while anything is still running, 0 when all pass, 1 when something failed, so the exit code is the whole state machine:
 
 ```bash
 while :; do
@@ -38,20 +34,10 @@ echo "CI settled (exit $code)"
 gh pr checks <number>
 ```
 
-Set the inputs deliberately:
-
-- `description`: specific, e.g. `CI status for PR #33`. It labels every notification, which matters once more than one monitor is live.
-- `timeout_ms`: the default is 5 minutes, which most pipelines outrun. Set roughly twice the pipeline's usual duration; the ceiling is 1 hour (`3600000`).
-- Leave `persistent` unset. This watch should end when CI settles, not run to the end of the session.
-
-Rules that keep the watch well behaved:
-
 - Poll no faster than every 30s — it's a remote API call and rate limits apply.
-- Silence means "nothing to report". Print only on a state change, never once per poll; every line costs context.
-- Suffix anything that can fail transiently with `|| true` so one network blip doesn't kill the watch.
-- If you pipe through a filter, use `grep --line-buffered`, or pipe buffering will hold events back for minutes.
-- Don't use `pgrep -f "<cmdline>"` as the loop condition — the monitor's own bash process matches the pattern and the loop never exits.
-- Cancel the monitor with `TaskStop` as soon as the pass is done. A forgotten monitor burns context for nothing.
+- Don't use `pgrep -f "<cmdline>"` as the loop condition — the loop's own bash process matches the pattern and it never exits.
+- If the wait is no longer needed, stop it with `TaskStop`.
+- Keep `Monitor` for streams of events, such as the comment watch in Notes; it is killed after 30 minutes, so re-arm it on expiry.
 
 ### Wait for requested reviews too
 
@@ -63,9 +49,7 @@ Before treating a pass as finished, use `gh` to check whether any review has bee
 - Don't rely on a single field such as `gh pr view --json reviewRequests`: it can come back empty while a bot's review is still being generated. The PR's timeline (`gh api graphql`, `timelineItems` with review-requested events and submitted reviews) shows both the request and the review with timestamps, so compare them.
 - Re-check after every push, because a push can trigger a fresh automatic review.
 
-If a review is pending, extend the monitor (or start a second one) to stay quiet until that review is submitted, then pick up its threads in Step 3. Don't wait forever: if a requested review hasn't arrived after roughly 15 minutes, report it as still pending rather than looping.
-
-If `Monitor` isn't available (it needs Claude Code v2.1.98+, and it's absent on Bedrock, Google Cloud's Agent Platform and Microsoft Foundry), fall back to running `gh pr checks <number> --watch --fail-fast --interval 30` as a Bash call with `run_in_background: true`. `--watch` is fine here precisely because background Bash isn't an event stream: the output sits in a buffer and only costs context when you go and read it, so the redraws are harmless. `--fail-fast` stops the watch on the first failure instead of waiting out the rest of the pipeline.
+If a review is pending, start a second background wait that exits once that review is submitted, then pick up its threads in Step 3. Don't wait forever: if a requested review hasn't arrived after roughly 15 minutes, report it as still pending rather than looping.
 
 ## Step 3 — The fix-and-batch loop
 
@@ -100,6 +84,6 @@ State the PR URL, final check status, which requested reviews were received (or 
 
 ## Notes
 
-- Optional second monitor: while working through a pass, you can watch for reviewer comments arriving mid-flight by polling `gh api "repos/<owner>/<repo>/pulls/<number>/comments?since=$last"` on a 60s cycle and printing only new bodies. Only worth starting if a review is actively in progress — otherwise it's noise.
+- Optional comment monitor: while working through a pass, you can watch for reviewer comments arriving mid-flight by polling `gh api "repos/<owner>/<repo>/pulls/<number>/comments?since=$last"` on a 60s cycle and printing only new bodies. Only worth starting if a review is actively in progress — otherwise it's noise.
 - This skill never merges the PR — it only gets it ready. Merge only if the user explicitly asks for that separately, and even then not while a requested review is still pending: merging first means its findings land on a closed PR.
 - Resolving a review thread and replying to inline comments are GraphQL/REST calls, not something `gh pr` wraps directly — see `references/github-graphql.md` for the exact commands.
