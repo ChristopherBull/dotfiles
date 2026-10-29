@@ -538,6 +538,19 @@ section_local_bin() {
         chmod +x "$script"
         echo "✅ [bin] Linked $target"
     done
+
+    # Ubuntu's ~/.profile adds ~/.local/bin only if it existed at login, and zsh
+    # and fish never read ~/.profile at all.
+    # shellcheck disable=SC2016
+    configure_for_installed_shells "bin" \
+        'export PATH="$HOME/.local/bin:$PATH"' \
+        'export PATH="$HOME/.local/bin:$PATH"' \
+        'fish_add_path -g $HOME/.local/bin'
+
+    case ":$PATH:" in
+        *":$TARGET_BIN_DIR:"*) ;;
+        *) export PATH="$TARGET_BIN_DIR:$PATH" ;;
+    esac
 }
 
 section_local_bin || echo "⚠️ [bin] Section encountered an error; continuing with the rest of the install"
