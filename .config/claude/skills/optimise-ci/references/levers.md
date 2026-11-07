@@ -96,6 +96,11 @@ Pattern (no merge queue needed):
    down the chain: without an `if:` of its own, a job is skipped when any ancestor was.
    List each job's `needs` and `if` and check every path.
 
+Download each run's artefacts into a separate folder. With a `pattern`, download-artifact
+gives each artefact its own folder only when more than one matches; a lone artefact's
+files land straight in `path`. Normalise the layout before merging, and test the cases
+"PR ran every suite", "PR ran some" and "PR ran none".
+
 Risks: the tree must be identical; a merge commit, or a branch behind main, gets a new
 tree and simply runs in full (safe). Keep artefact retention short (a few days). Tell the
 person to merge while the branch is up to date. A merge queue, where available, is the

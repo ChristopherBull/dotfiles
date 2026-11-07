@@ -166,6 +166,11 @@ is still open. Give measured numbers as measured, and label estimates as estimat
   `if: ${{ !cancelled() && needs.build.result == 'success' }}`. After making the main
   branch reuse a PR's image build, the reproducibility comparison two jobs later quietly
   stopped running; only reading the first post-merge run's job list showed it.
+- **Reused artefacts change shape with how many there are.** `actions/download-artifact`
+  with a `pattern` puts each artefact in its own folder, except when exactly one matches:
+  then it extracts the files straight into `path`. Reusing a PR run's coverage worked
+  when the PR had run every suite (five artefacts), and failed on main when it had run
+  only one. Test every combination the reuse can produce, not just the full set.
 - **A separate workflow can't wait for another's jobs.** To build something only after
   the checks pass, use a reusable workflow (`workflow_call`) called from the main workflow
   with `needs:`, rather than a second workflow with `workflow_run`.
