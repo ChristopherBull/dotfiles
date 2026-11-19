@@ -762,17 +762,42 @@ section_ghostty() {
 
     if [[ ! -f "$SOURCE_GHOSTTY_CONFIG" ]]; then
         echo "  ❗ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
-    else
-        local TARGET_GHOSTTY_CONFIG
-        TARGET_GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
+        return
+    fi
 
-        if [[ -f "$TARGET_GHOSTTY_CONFIG" ]] && [[ -s "$TARGET_GHOSTTY_CONFIG" ]]; then
-            echo "  ✅ [ghostty] Config already exists and is non-empty; skipping"
-        else
-            mkdir -p "$(dirname "$TARGET_GHOSTTY_CONFIG")"
-            ln -sf "$SOURCE_GHOSTTY_CONFIG" "$TARGET_GHOSTTY_CONFIG"
-            echo "  ✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
+    local TARGET_GHOSTTY_CONFIG BACKUP=""
+    TARGET_GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
+
+    if [[ "$(readlink -f "$TARGET_GHOSTTY_CONFIG")" == "$(readlink -f "$SOURCE_GHOSTTY_CONFIG")" ]]; then
+        echo "  ✅ [ghostty] Config already linked at $TARGET_GHOSTTY_CONFIG"
+        return
+    fi
+
+    if [[ -d "$TARGET_GHOSTTY_CONFIG" && ! -L "$TARGET_GHOSTTY_CONFIG" ]]; then
+        echo "  ❌ [ghostty] $TARGET_GHOSTTY_CONFIG is a directory; move it aside and re-run"
+        return 1
+    fi
+
+    # The link replaces any config already there, so keep a copy of one
+    # with content rather than losing it.
+    if [[ -s "$TARGET_GHOSTTY_CONFIG" && ! -L "$TARGET_GHOSTTY_CONFIG" ]]; then
+        BACKUP="$TARGET_GHOSTTY_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
+        if ! mv "$TARGET_GHOSTTY_CONFIG" "$BACKUP"; then
+            echo "  ❌ [ghostty] Couldn't move the existing config to $BACKUP; leaving it in place"
+            return 1
         fi
+        echo "  ...[ghostty] Backed up the existing config to $BACKUP"
+    fi
+
+    mkdir -p "$(dirname "$TARGET_GHOSTTY_CONFIG")"
+    if ln -sfn "$SOURCE_GHOSTTY_CONFIG" "$TARGET_GHOSTTY_CONFIG" \
+        && [[ "$(readlink -f "$TARGET_GHOSTTY_CONFIG")" == "$(readlink -f "$SOURCE_GHOSTTY_CONFIG")" ]]; then
+        echo "  ✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
+    else
+        echo "  ❌ [ghostty] Failed to link $TARGET_GHOSTTY_CONFIG to $SOURCE_GHOSTTY_CONFIG"
+        echo "  👉 [ghostty] Run: ln -sfn \"$SOURCE_GHOSTTY_CONFIG\" \"$TARGET_GHOSTTY_CONFIG\""
+        [[ -n "$BACKUP" ]] && echo "  👉 [ghostty] Your previous config is at $BACKUP"
+        return 1
     fi
 }
 
