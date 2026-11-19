@@ -695,9 +695,10 @@ Invoke-Section 'skills' {
 
 Write-Section 'Not ported from install.sh'
 Invoke-Section 'n/a' {
-    # Linux-only: zsh as the login shell, Ghostty's config, and Claude
-    # Code's npm ownership fix, which only applies inside Dev Containers.
-    Write-Skip 'n/a' 'zsh, Ghostty and the Dev Container Claude fix are Linux-only'
+    # Linux-only: zsh as the login shell, Ghostty's config, the fastfetch
+    # config (for CachyOS's fish greeting), and Claude Code's npm ownership
+    # fix, which only applies inside Dev Containers.
+    Write-Skip 'n/a' 'zsh, Ghostty, fastfetch and the Dev Container Claude fix are Linux-only'
 
     # TODO: port section_lsp. It picks LSP plugins from the project in
     # /workspaces, which only exists in a Dev Container; on Windows there is

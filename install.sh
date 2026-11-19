@@ -99,6 +99,48 @@ configure_for_installed_shells() {
     fi
 }
 
+# Symlinks $target to $source. A file with content already at $target is
+# moved to a timestamped .bak first, since the link would otherwise replace
+# it; stale links and empty files are just replaced.
+link_config() {
+    local label="$1" source="$2" target="$3" backup=""
+
+    if [[ ! -f "$source" ]]; then
+        echo "  ❗ [$label] Missing source config: $source; skipping"
+        return
+    fi
+
+    if [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then
+        echo "  ✅ [$label] Config already linked at $target"
+        return
+    fi
+
+    if [[ -d "$target" && ! -L "$target" ]]; then
+        echo "  ❌ [$label] $target is a directory; move it aside and re-run"
+        return 1
+    fi
+
+    if [[ -s "$target" && ! -L "$target" ]]; then
+        backup="$target.bak.$(date +%Y%m%d%H%M%S)"
+        if ! mv "$target" "$backup"; then
+            echo "  ❌ [$label] Couldn't move the existing config to $backup; leaving it in place"
+            return 1
+        fi
+        echo "  ...[$label] Backed up the existing config to $backup"
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    if ln -sfn "$source" "$target" \
+        && [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then
+        echo "  ✅ [$label] Config linked to $target"
+    else
+        echo "  ❌ [$label] Failed to link $target to $source"
+        echo "  👉 [$label] Run: ln -sfn \"$source\" \"$target\""
+        [[ -n "$backup" ]] && echo "  👉 [$label] Your previous config is at $backup"
+        return 1
+    fi
+}
+
 ROOT_HINT="re-run with --sudo to allow a sudo password prompt"
 
 # True when root steps can run without breaking the non-interactive default.
@@ -760,48 +802,25 @@ section_ghostty() {
         'export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"' \
         'set -q XDG_CONFIG_HOME; or set -gx XDG_CONFIG_HOME $HOME/.config'
 
-    if [[ ! -f "$SOURCE_GHOSTTY_CONFIG" ]]; then
-        echo "  ❗ [ghostty] Missing source config: $SOURCE_GHOSTTY_CONFIG; skipping"
-        return
-    fi
-
-    local TARGET_GHOSTTY_CONFIG BACKUP=""
-    TARGET_GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
-
-    if [[ "$(readlink -f "$TARGET_GHOSTTY_CONFIG")" == "$(readlink -f "$SOURCE_GHOSTTY_CONFIG")" ]]; then
-        echo "  ✅ [ghostty] Config already linked at $TARGET_GHOSTTY_CONFIG"
-        return
-    fi
-
-    if [[ -d "$TARGET_GHOSTTY_CONFIG" && ! -L "$TARGET_GHOSTTY_CONFIG" ]]; then
-        echo "  ❌ [ghostty] $TARGET_GHOSTTY_CONFIG is a directory; move it aside and re-run"
-        return 1
-    fi
-
-    # The link replaces any config already there, so keep a copy of one
-    # with content rather than losing it.
-    if [[ -s "$TARGET_GHOSTTY_CONFIG" && ! -L "$TARGET_GHOSTTY_CONFIG" ]]; then
-        BACKUP="$TARGET_GHOSTTY_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
-        if ! mv "$TARGET_GHOSTTY_CONFIG" "$BACKUP"; then
-            echo "  ❌ [ghostty] Couldn't move the existing config to $BACKUP; leaving it in place"
-            return 1
-        fi
-        echo "  ...[ghostty] Backed up the existing config to $BACKUP"
-    fi
-
-    mkdir -p "$(dirname "$TARGET_GHOSTTY_CONFIG")"
-    if ln -sfn "$SOURCE_GHOSTTY_CONFIG" "$TARGET_GHOSTTY_CONFIG" \
-        && [[ "$(readlink -f "$TARGET_GHOSTTY_CONFIG")" == "$(readlink -f "$SOURCE_GHOSTTY_CONFIG")" ]]; then
-        echo "  ✅ [ghostty] Config linked to $TARGET_GHOSTTY_CONFIG"
-    else
-        echo "  ❌ [ghostty] Failed to link $TARGET_GHOSTTY_CONFIG to $SOURCE_GHOSTTY_CONFIG"
-        echo "  👉 [ghostty] Run: ln -sfn \"$SOURCE_GHOSTTY_CONFIG\" \"$TARGET_GHOSTTY_CONFIG\""
-        [[ -n "$BACKUP" ]] && echo "  👉 [ghostty] Your previous config is at $BACKUP"
-        return 1
-    fi
+    link_config "ghostty" "$SOURCE_GHOSTTY_CONFIG" \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config.ghostty"
 }
 
 section_ghostty || echo "  ❗ [ghostty] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
+# fastfetch config (CachyOS's fish greeting runs fastfetch)
+# -----------------------------------------------------------------------------
+
+section_fastfetch() {
+    echo ""
+    echo "📊 fastfetch configuration"
+
+    link_config "fastfetch" "$DOTFILES_DIR/.config/fastfetch/config.jsonc" \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/config.jsonc"
+}
+
+section_fastfetch || echo "  ❗ [fastfetch] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
 # Global Git attributes

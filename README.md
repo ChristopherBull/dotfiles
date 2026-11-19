@@ -183,7 +183,7 @@ linked with directory **junctions**, which need neither.
 | OpenCode, VS Code | Same copy-or-merge logic, with jq, at the Windows paths. |
 | Git attributes, identity | Copied to `~\.config\git\attributes`; warns if `user.name`/`user.email` is unset. |
 | Claude Code | Native installer; `CLAUDE.md`, statusline, usage gate and `settings.json` (merged); skills as junctions. |
-| zsh, Ghostty, Dev Container Claude fix | Not applicable on Windows. |
+| zsh, Ghostty, fastfetch, Dev Container Claude fix | Not applicable on Windows. |
 
 It also downloads starlevel10k's `p10k-starship.ps1` to `$HOME\p10k-starship`.
 Starship's PowerShell setup leaves out `right_format`, so without it the
@@ -244,6 +244,7 @@ precedence where it overlaps.
 | Source | Installed to | Tool pickup |
 | --- | --- | --- |
 | [`.config/git/attributes`](/.config/git/attributes) | `~/.config/git/attributes` | Git's default global attributes path (no `git config` needed). |
+| [`.config/fastfetch/config.jsonc`](/.config/fastfetch/config.jsonc) | `~/.config/fastfetch/config.jsonc` | fastfetch's config, with a shorter list of modules. CachyOS's fish greeting runs fastfetch. |
 | [`.config/claude/CLAUDE.md`](/.config/claude/CLAUDE.md) | `~/.claude/CLAUDE.md` | Claude Code user-scoped memory; layers under any repo `AGENTS.md`. |
 | [`.config/claude/settings.json`](/.config/claude/settings.json) | `~/.claude/settings.json` | Claude Code global settings (allowlist, statusline). |
 | [`.config/claude/statusline-command.sh`](/.config/claude/statusline-command.sh) | `~/.claude/statusline-command.sh` | Claude Code statusline, wired up by `settings.json`. |
