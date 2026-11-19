@@ -486,6 +486,12 @@ section_starship() {
         'eval "$(starship init zsh)"' \
         'starship init fish | source'
 
+    # Appended after the init lines above, which these snippets depend on.
+    configure_for_installed_shells "starship transient prompt" \
+        "" \
+        "source \"$DOTFILES_DIR/.config/starship/transient.zsh\"" \
+        "source \"$DOTFILES_DIR/.config/starship/transient.fish\""
+
     # Starship config
     local SOURCE_STARSHIP_CONFIG TARGET_STARSHIP_CONFIG
     SOURCE_STARSHIP_CONFIG="$DOTFILES_DIR/.config/starship/starship.toml"

@@ -85,6 +85,26 @@ This repository includes a sample VS Code user settings file at [`.config/.vscod
 >  },
 > ```
 
+## Transient prompt
+
+Once a command is entered, its full Starship prompt collapses to just the `❯`
+character, so scrollback stays compact. The snippets live in
+[`.config/starship/`](/.config/starship):
+
+- **fish** (`transient.fish`) uses Starship's built-in `enable_transience`.
+- **zsh** (`transient.zsh`) is a `zle-line-init` widget, as Starship has no
+  native zsh support.
+- **PowerShell** (`transient.ps1`) uses Starship's `Enable-TransientPrompt`.
+
+`install.sh` sources the fish and zsh snippets after `starship init`. It doesn't
+run on Windows, so add these lines to your PowerShell `$PROFILE` by hand
+(adjust the path to wherever the repo is cloned):
+
+```powershell
+Invoke-Expression (&starship init powershell)
+. "$HOME\dotfiles\.config\starship\transient.ps1"
+```
+
 ## Global configurations
 
 `install.sh` installs a small set of personal, user-scoped configs to your home
