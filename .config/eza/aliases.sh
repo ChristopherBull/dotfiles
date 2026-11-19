@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # eza aliases for bash and zsh. Guarded so ls still works where eza is missing.
 if command -v eza >/dev/null 2>&1; then
     alias ls='eza --icons --group-directories-first'
