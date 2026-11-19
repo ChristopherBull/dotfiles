@@ -165,9 +165,11 @@ vimcmd_replace_symbol = '[❮](bold fg:lavender)'
 vimcmd_visual_symbol = '[❮](bold fg:yellow)'
 
 [cmd_duration]
-show_milliseconds = true
-format = " in $duration "
-style = "bg:lavender"
+# Shown on the line below the previous command, so the arrow points up at it.
+min_time = 1000
+show_milliseconds = false
+format = "[▲ $duration]($style)"
+style = "fg:lavender"
 disabled = false
 show_notifications = true
 min_time_to_notify = 45000
