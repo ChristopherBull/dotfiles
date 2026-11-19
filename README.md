@@ -113,9 +113,11 @@ character, so scrollback stays compact. The snippets live in
 - **zsh** (`transient.zsh`) is a `zle-line-init` widget, as Starship has no
   native zsh support.
 - **PowerShell** (`transient.ps1`) uses Starship's `Enable-TransientPrompt`.
+- **cmd** (`.config/clink/starship.lua`) uses Clink's `prompt.transient`.
 
 `install.sh` sources the fish and zsh snippets after `starship init`. For
-PowerShell, see [PowerShell (Windows)](#powershell-windows).
+PowerShell and cmd, see [PowerShell (Windows)](#powershell-windows) and
+[cmd](#cmd-windows-through-clink).
 
 ## File icons in `ls`
 
@@ -158,13 +160,37 @@ Font):
 Install-Module -Name Terminal-Icons -Repository PSGallery
 ```
 
-Then add these lines to your `$PROFILE` (adjust the path to wherever the repo is
-cloned):
+Starship's PowerShell setup leaves out `right_format`, so the theme's `─╯`
+corner is missing. starlevel10k's `p10k-starship.ps1` adds it. It has no
+licence, so it isn't copied into this repo; download it once:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\p10k-starship" | Out-Null
+Invoke-WebRequest https://raw.githubusercontent.com/odt1/starlevel10k/main/p10k-starship.ps1 `
+    -OutFile "$HOME\p10k-starship\p10k-starship.ps1"
+```
+
+Then add these lines to your `$PROFILE` (open it with `notepad $PROFILE`, and
+adjust the dotfiles path to wherever the repo is cloned). `p10k-starship.ps1`
+must come straight after `starship init`:
 
 ```powershell
 Import-Module -Name Terminal-Icons
 Invoke-Expression (&starship init powershell)
+. "$HOME\p10k-starship\p10k-starship.ps1"
 . "$HOME\dotfiles\.config\starship\transient.ps1"
+```
+
+## cmd (Windows, through Clink)
+
+Starship runs in cmd through [Clink](https://chrisant996.github.io/clink/).
+[`.config/clink/starship.lua`](/.config/clink/starship.lua) loads it with the
+same transient prompt as the other shells. Register the folder and turn on
+transience once (adjust the path to wherever the repo is cloned):
+
+```bat
+clink installscripts %USERPROFILE%\dotfiles\.config\clink
+clink set prompt.transient always
 ```
 
 ## Global configurations
