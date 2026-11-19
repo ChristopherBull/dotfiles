@@ -116,7 +116,7 @@ character, so scrollback stays compact. The snippets live in
 - **cmd** (`.config/clink/starship.lua`) uses Clink's `prompt.transient`.
 
 `install.sh` sources the fish and zsh snippets after `starship init`. For
-PowerShell and cmd, see [PowerShell (Windows)](#powershell-windows) and
+PowerShell and cmd, see [Windows (PowerShell)](#windows-powershell) and
 [cmd](#cmd-windows-through-clink).
 
 ## File icons in `ls`
@@ -145,51 +145,89 @@ pacman on Arch, Homebrew on macOS, and otherwise as a per-user download into
 
 Inside WSL or a Dev Container the terminal runs on the host, so a font installed
 there would never be used. `install.sh` skips it and says so instead: install
-the font on the host (e.g. `scoop bucket add nerd-fonts`, then
-`scoop install FiraCode-NF` on Windows), then select it in your terminal and in
-VS Code's `terminal.integrated.fontFamily`.
+the font on the host (on Windows, [`install.ps1`](#windows-powershell) does it
+without admin), then select it in your terminal and in VS Code's
+`terminal.integrated.fontFamily`.
 
-## PowerShell (Windows)
+## Windows (PowerShell)
 
-`install.sh` doesn't run on Windows, so set PowerShell up by hand.
-[Terminal-Icons](https://github.com/devblackops/Terminal-Icons) is the
-PowerShell counterpart to eza's icons. Install it once (it also needs a Nerd
-Font):
+`install.sh` doesn't run on Windows; [`install.ps1`](/install.ps1) is its
+counterpart, and `install.sh` stays the source of truth. It **never needs
+admin**, so it works on managed machines, and is safe to re-run. Clone the repo
+on Windows (not inside WSL), then from a normal (not elevated) terminal:
 
 ```powershell
-Install-Module -Name Terminal-Icons -Repository PSGallery
+git clone https://github.com/YOURNAME/dotfiles.git $HOME\dotfiles
+cd $HOME\dotfiles
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Starship's PowerShell setup leaves out `right_format`, so the theme's `─╯`
-corner is missing. starlevel10k's `p10k-starship.ps1` adds it. It has no
-licence, so it isn't copied into this repo; download it once:
+`-ExecutionPolicy Bypass` applies to that one process only. Everything installs
+for the current user: winget runs with `--scope user`, `gh` comes from its
+portable release (its winget MSI can ask for admin), fonts and environment
+variables go under `HKCU`, and modules go to `CurrentUser`. It warns if it is
+run elevated, since per-user installs would then land in the admin account.
+
+Windows symlinks need admin or Developer Mode, so files that `install.sh`
+symlinks are **copied** instead (re-run to refresh them), and skill folders are
+linked with directory **junctions**, which need neither.
+
+| `install.sh` section | `install.ps1` |
+| --- | --- |
+| `~/.local/bin` on `PATH` | Adds `~\.local\bin` to the user `PATH`. The scripts in it are Linux-only. |
+| `gh`, ShellCheck, `jq` | Portable `gh` release; ShellCheck and `jq` with winget. |
+| Starship | winget, plus a user `STARSHIP_CONFIG` pointing at this repo's theme (PowerShell and cmd both read it). |
+| eza | [Terminal-Icons](https://github.com/devblackops/Terminal-Icons), its PowerShell counterpart. |
+| Nerd Font | FiraCode Nerd Font, per user. Windows Terminal also draws WSL, so this fixes the icons there too. |
+| Shell rc lines | A managed block in the Windows PowerShell 5.1 and PowerShell 7 profiles (below). |
+| OpenCode, VS Code | Same copy-or-merge logic, with jq, at the Windows paths. |
+| Git attributes, identity | Copied to `~\.config\git\attributes`; warns if `user.name`/`user.email` is unset. |
+| Claude Code | Native installer; `CLAUDE.md`, statusline, usage gate and `settings.json` (merged); skills as junctions. |
+| zsh, Ghostty, minimal hosts, Dev Container Claude fix | Not applicable on Windows. |
+
+It also downloads starlevel10k's `p10k-starship.ps1` to `$HOME\p10k-starship`.
+Starship's PowerShell setup leaves out `right_format`, so without it the
+theme's `─╯` corner is missing. It has no licence, so it isn't copied into
+this repo.
+
+The profile block is rewritten on each run, so don't edit inside it. It
+replaces a hand-added `Invoke-Expression (&starship init powershell)` line, and
+does nothing on a machine without Starship:
 
 ```powershell
-New-Item -ItemType Directory -Force "$HOME\p10k-starship" | Out-Null
-Invoke-WebRequest https://raw.githubusercontent.com/odt1/starlevel10k/main/p10k-starship.ps1 `
-    -OutFile "$HOME\p10k-starship\p10k-starship.ps1"
-```
-
-Then add these lines to your `$PROFILE` (open it with `notepad $PROFILE`, and
-adjust the dotfiles path to wherever the repo is cloned). `p10k-starship.ps1`
-must come straight after `starship init`, and the `if` keeps the profile
-loading cleanly on a machine without Starship:
-
-```powershell
-Import-Module -Name Terminal-Icons
+# >>> dotfiles (managed by install.ps1; edits inside are overwritten) >>>
+if (Get-Module -ListAvailable -Name Terminal-Icons) { Import-Module -Name Terminal-Icons }
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
-    . "$HOME\p10k-starship\p10k-starship.ps1"
-    . "$HOME\dotfiles\.config\starship\transient.ps1"
+    if (Test-Path '...\p10k-starship.ps1') { . '...\p10k-starship.ps1' }
+    . '...\dotfiles\.config\starship\transient.ps1'
 }
+# <<< dotfiles <<<
 ```
+
+### Known gaps
+
+`install.ps1` prints each of these as a ⚠️ `TODO`, with a matching comment in
+the script:
+
+- **Claude Code statusline** is untested on native Windows. `settings.json`
+  runs it through `bash`, so it needs Git for Windows and `jq` on `PATH`, and
+  may need a PowerShell port.
+- **OpenCode's config path** on Windows is assumed to be
+  `~\.config\opencode\opencode.json`, as on Linux; unconfirmed.
+- **Language LSP plugins** aren't set up: `install.sh` derives them from the
+  Dev Container's project, and there is no project to inspect at install time.
+- **Group Policy execution policies** of `AllSigned` or `Restricted` stop the
+  profile loading this repo's unsigned scripts.
+- **Constrained Language Mode** (forced by some Device Guard or AppLocker
+  policies) blocks parts of the script.
 
 ## cmd (Windows, through Clink)
 
 Starship runs in cmd through [Clink](https://chrisant996.github.io/clink/).
 [`.config/clink/starship.lua`](/.config/clink/starship.lua) loads it with the
-same transient prompt as the other shells. Register the folder and turn on
-transience once (adjust the path to wherever the repo is cloned):
+same transient prompt as the other shells. `install.ps1` registers it when Clink
+is installed; to do it by hand (adjust the path to wherever the repo is cloned):
 
 ```bat
 clink installscripts %USERPROFILE%\dotfiles\.config\clink

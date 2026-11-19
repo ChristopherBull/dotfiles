@@ -580,7 +580,7 @@ section_nerd_font() {
     if [[ -n "$where" ]]; then
         echo "  ⏩ [font] Inside $where; the font must be installed on the host machine instead"
         echo "  👉 [font] Install $NERD_FONT_FAMILY from https://www.nerdfonts.com/font-downloads"
-        echo "  👉 [font] (or: scoop bucket add nerd-fonts; scoop install FiraCode-NF), then select it"
+        echo "  👉 [font] (on Windows, install.ps1 from a Windows clone does it without admin), then select it"
         echo "            in your terminal and VS Code's terminal.integrated.fontFamily"
         return
     fi
