@@ -183,7 +183,7 @@ linked with directory **junctions**, which need neither.
 | OpenCode, VS Code | Same copy-or-merge logic, with jq, at the Windows paths. |
 | Git attributes, identity | Copied to `~\.config\git\attributes`; warns if `user.name`/`user.email` is unset. |
 | Claude Code | Native installer; `CLAUDE.md`, statusline, usage gate and `settings.json` (merged); skills as junctions. |
-| zsh, Ghostty, minimal hosts, Dev Container Claude fix | Not applicable on Windows. |
+| zsh, Ghostty, Dev Container Claude fix | Not applicable on Windows. |
 
 It also downloads starlevel10k's `p10k-starship.ps1` to `$HOME\p10k-starship`.
 Starship's PowerShell setup leaves out `right_format`, so without it the
