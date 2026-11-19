@@ -22,6 +22,26 @@ jobs:
           echo "Validating ${#files[@]} shell script(s)..."
           printf '%s\0' "${files[@]}" | xargs -0 shellcheck
 
+      # Same job, not a Windows runner: GitHub's Ubuntu image ships pwsh and
+      # PSScriptAnalyzer, so this adds seconds and no setup or cache. The
+      # settings file adds Windows PowerShell 5.1 compatibility checks.
+      - name: PowerShell scripts (PSScriptAnalyzer)
+        shell: pwsh
+        run: |
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          }
+          $files = @(git ls-files '*.ps1' '*.psm1' '*.psd1')
+          Write-Output "Validating $($files.Count) PowerShell file(s)..."
+          $findings = @($files | ForEach-Object {
+            Invoke-ScriptAnalyzer -Path $_ -Settings ./PSScriptAnalyzerSettings.psd1
+          })
+          if ($findings.Count -gt 0) {
+            $findings | Format-Table ScriptName, Line, Severity, RuleName, Message -AutoSize -Wrap |
+              Out-String -Width 200 | Write-Output
+            exit 1
+          }
+
       - name: JSON (jq)
         run: |
           mapfile -t files < <(git ls-files '*.json')
