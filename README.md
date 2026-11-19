@@ -55,9 +55,9 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     ./install.sh --sudo
     ```
 
-    It installs any missing zsh, `gh`, ShellCheck, `jq`, Starship, eza and
-    Claude Code. Starship and Claude Code go into `~/.local/bin`, so they never need
-    root.
+    It installs any missing zsh, `gh`, ShellCheck, `jq`, Starship, eza, a Nerd
+    Font and Claude Code. Starship and Claude Code go into `~/.local/bin`, so
+    they never need root.
 
 ## VS Code User Settings
 
@@ -114,8 +114,20 @@ replacement, and sources aliases for bash, zsh
 | `lt` | `eza --tree --icons --level=2` |
 
 The aliases are only set when `eza` is on `PATH`, so `ls` keeps working where
-it isn't installed. The icons need a [Nerd Font](https://www.nerdfonts.com/) in
-the terminal.
+it isn't installed.
+
+### Nerd Font
+
+The icons (and the Starship prompt) need a [Nerd Font](https://www.nerdfonts.com/).
+`install.sh` installs FiraCode Nerd Font, the font the Ghostty config uses: with
+pacman on Arch, Homebrew on macOS, and otherwise as a per-user download into
+`~/.local/share/fonts`. It skips machines without fontconfig (likely headless).
+
+Inside WSL or a Dev Container the terminal runs on the host, so a font installed
+there would never be used. `install.sh` skips it and says so instead: install
+the font on the host (e.g. `scoop bucket add nerd-fonts`, then
+`scoop install FiraCode-NF` on Windows), then select it in your terminal and in
+VS Code's `terminal.integrated.fontFamily`.
 
 ## PowerShell (Windows)
 

@@ -537,6 +537,85 @@ section_eza() {
 section_eza || echo "  ❗ [eza] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# Nerd Font (icons for Starship, eza and Terminal-Icons)
+# -----------------------------------------------------------------------------
+
+NERD_FONT_FAMILY="FiraCode Nerd Font"  # matches .config/ghostty/config.ghostty
+
+section_nerd_font() {
+    echo ""
+    echo "🔤 Nerd Font"
+
+    # Glyphs are drawn by the terminal, which runs on the host, so a font
+    # installed inside a container or WSL is never used.
+    local where=""
+    if [[ "${REMOTE_CONTAINERS:-}" == "true" || "${CODESPACES:-}" == "true" \
+        || -f /.dockerenv || -f /run/.containerenv ]]; then
+        where="a container"
+    elif [[ -n "${WSL_DISTRO_NAME:-}" || -e /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
+        where="WSL"
+    fi
+    if [[ -n "$where" ]]; then
+        echo "  ⏩ [font] Inside $where; the font must be installed on the host machine instead"
+        echo "  👉 [font] Install $NERD_FONT_FAMILY from https://www.nerdfonts.com/font-downloads"
+        echo "  👉 [font] (or: scoop bucket add nerd-fonts; scoop install FiraCode-NF), then select it"
+        echo "            in your terminal and VS Code's terminal.integrated.fontFamily"
+        return
+    fi
+
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        if ! command -v brew >/dev/null 2>&1; then
+            echo "  ❗ [font] Homebrew not found; install $NERD_FONT_FAMILY from https://www.nerdfonts.com/font-downloads"
+        elif brew list --cask font-fira-code-nerd-font >/dev/null 2>&1; then
+            echo "  ✅ [font] $NERD_FONT_FAMILY already installed"
+        else
+            brew install --cask font-fira-code-nerd-font || return 1
+            echo "  ✅ [font] $NERD_FONT_FAMILY installed"
+        fi
+        return
+    fi
+
+    if ! command -v fc-list >/dev/null 2>&1; then
+        echo "  ⏩ [font] No fontconfig, so likely headless; skipping"
+        return
+    fi
+    if fc-list : family | grep -qiF "$NERD_FONT_FAMILY"; then
+        echo "  ✅ [font] $NERD_FONT_FAMILY already installed"
+        return
+    fi
+
+    if command -v pacman >/dev/null 2>&1 && can_root; then
+        echo "  ...[font] Installing with pacman"
+        if as_root pacman -S --noconfirm --needed ttf-firacode-nerd; then
+            echo "  ✅ [font] $NERD_FONT_FAMILY installed"
+            return
+        fi
+        echo "  ❗ [font] pacman failed; falling back to a per-user install"
+    fi
+
+    # Per-user install from the upstream release: needs no root and works on
+    # any distro, including those that don't package Nerd Fonts.
+    local font_dir="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/NerdFonts/FiraCode"
+    local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.tar.xz"
+    local tmp
+    tmp="$(mktemp -d)"
+    echo "  ...[font] Downloading to $font_dir"
+    if curl -fsSL "$url" -o "$tmp/FiraCode.tar.xz" \
+        && mkdir -p "$font_dir" \
+        && tar -xJf "$tmp/FiraCode.tar.xz" -C "$font_dir"; then
+        rm -rf "$tmp"
+        fc-cache -f "$font_dir" >/dev/null 2>&1 || true
+        echo "  ✅ [font] $NERD_FONT_FAMILY installed to $font_dir"
+    else
+        rm -rf "$tmp"
+        echo "  ❗ [font] Download failed; install $NERD_FONT_FAMILY from https://www.nerdfonts.com/font-downloads"
+        return 1
+    fi
+}
+
+section_nerd_font || echo "  ❗ [font] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # OpenCode config
 # -----------------------------------------------------------------------------
 
