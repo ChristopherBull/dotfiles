@@ -85,6 +85,24 @@ This repository includes a sample VS Code user settings file at [`.config/.vscod
 >  },
 > ```
 
+## Starship theme
+
+[`.config/starship/starship.toml`](/.config/starship/starship.toml) is a
+Powerlevel10k Classic-style theme made with
+[starlevel10k](https://github.com/odt1/starlevel10k)'s
+[configurator](https://odt1.github.io/starlevel10k/configure.html). The answers
+are in its header, along with a link that opens the configurator with them
+selected. Two changes from the generated file: the previous command's duration
+shows from 1 second as `▲ 1m15s`, with a desktop notification after 45 seconds,
+and the time is `HH:MM`. `install.sh` symlinks it to `~/.config/starship.toml`.
+
+Other themes live in [`.config/starship/themes/`](/.config/starship/themes).
+To try one in the current shell only:
+
+```sh
+export STARSHIP_CONFIG=~/dotfiles/.config/starship/themes/catppuccin-powerline.toml
+```
+
 ## Transient prompt
 
 Once a command is entered, its full Starship prompt collapses to just the `❯`
