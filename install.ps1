@@ -328,11 +328,24 @@ Invoke-Section 'font' {
     $fontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
     $regPath = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
 
-    $registered = @()
-    if (Test-Path $regPath) {
-        $registered = (Get-ItemProperty $regPath).PSObject.Properties.Name
+    # Installed by this script, by Windows' own "Install" (per user, named
+    # after the font: "FiraCode Nerd Font Regular (TrueType)"), or for all
+    # users by an admin. Match value names and file paths in both hives;
+    # reading HKLM needs no admin.
+    $installed = $false
+    foreach ($hive in @($regPath, 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts')) {
+        if (-not (Test-Path $hive)) { continue }
+        foreach ($entry in (Get-ItemProperty $hive).PSObject.Properties) {
+            if ($entry.Name -like 'PS*') { continue }
+            if ($entry.Name -like 'FiraCode Nerd Font*' -or $entry.Name -like 'FiraCodeNerdFont*' -or
+                [string]$entry.Value -like '*FiraCodeNerdFont*') {
+                $installed = $true
+                break
+            }
+        }
+        if ($installed) { break }
     }
-    if ($registered -like 'FiraCodeNerdFont*') {
+    if ($installed) {
         Write-Ok 'font' "$NerdFontFamily already installed"
         return
     }
@@ -352,7 +365,11 @@ Invoke-Section 'font' {
         if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
         foreach ($font in Get-ChildItem -Path $tmp -Filter '*.ttf') {
             $dest = Join-Path $fontDir $font.Name
-            Copy-Item -Path $font.FullName -Destination $dest -Force
+            # A font file already there may be loaded, and so locked; it's the
+            # same font, so keep it and only make sure it's registered.
+            if (-not (Test-Path $dest)) {
+                Copy-Item -Path $font.FullName -Destination $dest
+            }
             New-ItemProperty -Path $regPath -Name "$($font.BaseName) (TrueType)" `
                 -Value $dest -PropertyType String -Force | Out-Null
         }
