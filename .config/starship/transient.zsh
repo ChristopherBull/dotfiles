@@ -1,6 +1,6 @@
 # Transient prompt for zsh. Starship only supports this natively in fish and
-# PowerShell, so redraw the prompt as just the character module once a line
-# is accepted. Source after `starship init zsh`.
+# PowerShell, so redraw the prompt as two blank lines and the character module
+# once a line is accepted. Source after `starship init zsh`.
 #
 # recursive-edit (rather than zle-line-finish) lets Ctrl-C and Ctrl-D on an
 # empty line collapse the prompt too.
@@ -17,7 +17,9 @@ _starship_transient_line_init() {
     done
 
     local saved_prompt=$PROMPT saved_rprompt=$RPROMPT
-    PROMPT='$(starship module character --status="${STARSHIP_CMD_STATUS:-}")'
+    # Two newlines: add_newline's gap, then one in place of the details bar, so
+    # the prompt keeps its height and nothing below it jumps.
+    PROMPT=$'\n\n''$(starship module character --status="${STARSHIP_CMD_STATUS:-}")'
     RPROMPT=''
     zle .reset-prompt
     PROMPT=$saved_prompt
