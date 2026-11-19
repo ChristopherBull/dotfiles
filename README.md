@@ -55,8 +55,8 @@ Dev Container support is built-in for automatic environment setup. To apply to a
     ./install.sh --sudo
     ```
 
-    It installs any missing zsh, `gh`, ShellCheck, `jq`, Starship and Claude
-    Code. Starship and Claude Code go into `~/.local/bin`, so they never need
+    It installs any missing zsh, `gh`, ShellCheck, `jq`, Starship, eza and
+    Claude Code. Starship and Claude Code go into `~/.local/bin`, so they never need
     root.
 
 ## VS Code User Settings
@@ -96,11 +96,43 @@ character, so scrollback stays compact. The snippets live in
   native zsh support.
 - **PowerShell** (`transient.ps1`) uses Starship's `Enable-TransientPrompt`.
 
-`install.sh` sources the fish and zsh snippets after `starship init`. It doesn't
-run on Windows, so add these lines to your PowerShell `$PROFILE` by hand
-(adjust the path to wherever the repo is cloned):
+`install.sh` sources the fish and zsh snippets after `starship init`. For
+PowerShell, see [PowerShell (Windows)](#powershell-windows).
+
+## File icons in `ls`
+
+`install.sh` installs [eza](https://github.com/eza-community/eza), a fast `ls`
+replacement, and sources aliases for bash, zsh
+([`.config/eza/aliases.sh`](/.config/eza/aliases.sh)) and fish
+([`.config/eza/aliases.fish`](/.config/eza/aliases.fish)):
+
+| Alias | Runs |
+| --- | --- |
+| `ls` | `eza --icons --group-directories-first` |
+| `ll` | `eza -l --icons --git --group-directories-first` |
+| `la` | `eza -la --icons --git --group-directories-first` |
+| `lt` | `eza --tree --icons --level=2` |
+
+The aliases are only set when `eza` is on `PATH`, so `ls` keeps working where
+it isn't installed. The icons need a [Nerd Font](https://www.nerdfonts.com/) in
+the terminal.
+
+## PowerShell (Windows)
+
+`install.sh` doesn't run on Windows, so set PowerShell up by hand.
+[Terminal-Icons](https://github.com/devblackops/Terminal-Icons) is the
+PowerShell counterpart to eza's icons. Install it once (it also needs a Nerd
+Font):
 
 ```powershell
+Install-Module -Name Terminal-Icons -Repository PSGallery
+```
+
+Then add these lines to your `$PROFILE` (adjust the path to wherever the repo is
+cloned):
+
+```powershell
+Import-Module -Name Terminal-Icons
 Invoke-Expression (&starship init powershell)
 . "$HOME\dotfiles\.config\starship\transient.ps1"
 ```

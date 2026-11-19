@@ -509,6 +509,34 @@ section_starship() {
 section_starship || echo "  ❗ [starship] Section encountered an error; continuing with the rest of the install"
 
 # -----------------------------------------------------------------------------
+# eza (ls replacement with icons)
+# -----------------------------------------------------------------------------
+
+section_eza() {
+    echo ""
+    echo "📂 eza"
+
+    if command -v eza >/dev/null 2>&1; then
+        echo "  ✅ [eza] Already installed: $(eza --version | sed -n 's/^\(v[0-9.]*\).*/\1/p')"
+    else
+        echo "  ...[eza] Not found"
+        # Skip the aliases unless eza is really there, so ls stays untouched.
+        install_package "eza" eza || return 0
+        if ! command -v eza >/dev/null 2>&1; then
+            echo "  ❗ [eza] Not on PATH after install; skipping aliases"
+            return 0
+        fi
+    fi
+
+    configure_for_installed_shells "eza aliases" \
+        "source \"$DOTFILES_DIR/.config/eza/aliases.sh\"" \
+        "source \"$DOTFILES_DIR/.config/eza/aliases.sh\"" \
+        "source \"$DOTFILES_DIR/.config/eza/aliases.fish\""
+}
+
+section_eza || echo "  ❗ [eza] Section encountered an error; continuing with the rest of the install"
+
+# -----------------------------------------------------------------------------
 # OpenCode config
 # -----------------------------------------------------------------------------
 
