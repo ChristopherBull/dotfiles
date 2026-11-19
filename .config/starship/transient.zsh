@@ -5,6 +5,9 @@
 # recursive-edit (rather than zle-line-finish) lets Ctrl-C and Ctrl-D on an
 # empty line collapse the prompt too.
 
+# Without Starship the widget would print "command not found" on every Enter.
+(( $+commands[starship] )) || return 0
+
 # zsh pads the right prompt one column from the edge by default, which leaves
 # a gap after a right_format frame such as the p10k theme's "─╯".
 ZLE_RPROMPT_INDENT=0

@@ -2,6 +2,10 @@
 # add_newline gap, then one in place of the details bar) and the character
 # module, so the prompt keeps its height.
 # Source after `starship init fish | source`.
+
+# enable_transience comes from starship init, so skip without Starship.
+type -q starship; or return 0
+
 function starship_transient_prompt_func
     echo
     echo

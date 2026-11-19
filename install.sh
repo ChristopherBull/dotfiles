@@ -85,6 +85,19 @@ add_line_if_missing() {
     grep -qxF "$line" "$file" || echo "$line" >> "$file"
 }
 
+# Rewrites any line exactly equal to $old as $new in $file, in place, so a
+# changed line keeps its position (and its order relative to later lines)
+# instead of being appended again. ENVIRON avoids awk's escape processing.
+replace_line_if_present() {
+    local old="$1" new="$2" file="$3" tmp
+
+    [[ -f "$file" ]] && grep -qxF "$old" "$file" || return 0
+    tmp="$(mktemp)"
+    OLD="$old" NEW="$new" awk '$0 == ENVIRON["OLD"] { $0 = ENVIRON["NEW"] } { print }' "$file" > "$tmp" \
+        && cat "$tmp" > "$file"
+    rm -f "$tmp"
+}
+
 # Appends the shell-appropriate line to every installed shell's rc file,
 # rather than guessing a single "current" shell — a machine can run more than
 # one side by side (e.g. zsh in a devcontainer, fish at the desktop). Pass ""
@@ -443,6 +456,7 @@ section_jq || echo "  ❗ [jq] Section encountered an error; continuing with the
 # Starship
 # -----------------------------------------------------------------------------
 
+# shellcheck disable=SC2016  # rc-file lines are single-quoted on purpose
 section_starship() {
     echo ""
     echo "🔧 Starship configuration"
@@ -478,13 +492,21 @@ section_starship() {
         return
     fi
 
-    # shellcheck disable=SC2016
     # Single quotes are intentional: write the literal init line into each rc
-    # file so it runs at every shell startup, not at install time.
-    configure_for_installed_shells "starship" \
-        'eval "$(starship init bash)"' \
-        'eval "$(starship init zsh)"' \
-        'starship init fish | source'
+    # file so it runs at every shell startup, not at install time. Each line
+    # checks for starship itself, so an rc file synced to (or kept on) a
+    # machine without it starts cleanly.
+    local bash_init='command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"'
+    local zsh_init='command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"'
+    local fish_init='type -q starship; and starship init fish | source'
+
+    # Upgrade the unguarded lines earlier versions wrote, in place, so they
+    # stay ahead of the transient snippets that depend on them.
+    replace_line_if_present 'eval "$(starship init bash)"' "$bash_init" ~/.bashrc
+    replace_line_if_present 'eval "$(starship init zsh)"' "$zsh_init" ~/.zshrc
+    replace_line_if_present 'starship init fish | source' "$fish_init" ~/.config/fish/config.fish
+
+    configure_for_installed_shells "starship" "$bash_init" "$zsh_init" "$fish_init"
 
     # Appended after the init lines above, which these snippets depend on.
     configure_for_installed_shells "starship transient prompt" \

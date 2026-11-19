@@ -172,13 +172,16 @@ Invoke-WebRequest https://raw.githubusercontent.com/odt1/starlevel10k/main/p10k-
 
 Then add these lines to your `$PROFILE` (open it with `notepad $PROFILE`, and
 adjust the dotfiles path to wherever the repo is cloned). `p10k-starship.ps1`
-must come straight after `starship init`:
+must come straight after `starship init`, and the `if` keeps the profile
+loading cleanly on a machine without Starship:
 
 ```powershell
 Import-Module -Name Terminal-Icons
-Invoke-Expression (&starship init powershell)
-. "$HOME\p10k-starship\p10k-starship.ps1"
-. "$HOME\dotfiles\.config\starship\transient.ps1"
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (&starship init powershell)
+    . "$HOME\p10k-starship\p10k-starship.ps1"
+    . "$HOME\dotfiles\.config\starship\transient.ps1"
+}
 ```
 
 ## cmd (Windows, through Clink)
