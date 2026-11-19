@@ -1,15 +1,24 @@
 theme = Catppuccin Mocha
 
 font-family = FiraCode Nerd Font
-font-size = 15
 
-window-padding-x = 8
+# true is the default intensity of 20 on macOS; on Linux the number value
+# is ignored and any positive value or true just turns blur on
+background-blur = true
+background-opacity = 0.8
+
+# Initial window dimensions (140 × 40 = comfortably larger)
+window-width = 140
+window-height = 40
+
+# Breathing room around terminal content
+window-padding-x = 12
 window-padding-y = 8
 window-padding-balance = true
 
-background-opacity = 0.92
-background-blur = 20
+# Shell integration
+shell-integration = detect
+shell-integration-features = cursor,title,sudo,ssh-env,ssh-terminfo
 
-shell-integration = zsh
-
+# Cursor
 mouse-hide-while-typing = true
