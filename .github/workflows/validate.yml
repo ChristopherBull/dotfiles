@@ -12,9 +12,12 @@ permissions:
 jobs:
   validate:
     name: Scripts & configs
-    runs-on: ubuntu-latest
+    # 1-core runner at a third of the 2-core rate ($0.002 vs $0.006 a
+    # minute), so it's cheaper as long as the job bills under 3 minutes.
+    # Single-CPU jobs are capped at 15 minutes.
+    runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Shell scripts (shellcheck)
         run: |
@@ -22,8 +25,8 @@ jobs:
           echo "Validating ${#files[@]} shell script(s)..."
           printf '%s\0' "${files[@]}" | xargs -0 shellcheck
 
-      # Same job, not a Windows runner: GitHub's Ubuntu image ships pwsh and
-      # PSScriptAnalyzer, so this adds seconds and no setup or cache. The
+      # Same job, not a Windows runner. The slim image ships pwsh but not
+      # PSScriptAnalyzer, so it's installed from PSGallery when missing. The
       # settings file adds Windows PowerShell 5.1 compatibility checks.
       - name: PowerShell scripts (PSScriptAnalyzer)
         shell: pwsh
@@ -50,6 +53,11 @@ jobs:
 
       - name: YAML (PyYAML)
         run: |
+          # The slim image has python3 but not PyYAML.
+          if ! python3 -c 'import yaml' 2>/dev/null; then
+            sudo apt-get update -q
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q python3-yaml
+          fi
           mapfile -t files < <(git ls-files '*.yml' '*.yaml')
           echo "Validating ${#files[@]} YAML file(s)..."
           for file in "${files[@]}"; do
